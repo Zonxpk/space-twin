@@ -56,3 +56,8 @@ func AnalyzeFloorplan(ctx context.Context, data []byte, mimeType string) (string
 
 	return "", fmt.Errorf("unexpected response format")
 }
+
+// getClient creates a new Vertex AI client (shared helper)
+func getClient(ctx context.Context) (*genai.Client, error) {
+	return genai.NewClient(ctx, ProjectID, Location)
+}
