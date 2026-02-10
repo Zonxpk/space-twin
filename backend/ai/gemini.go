@@ -25,13 +25,24 @@ func AnalyzeFloorplan(ctx context.Context, data []byte, mimeType string) (string
 	model.ResponseMIMEType = "application/json"
 
 	// Prompt to force JSON structure for rooms and content_box
-	prompt := genai.Text("Analyze this floor plan. " +
-		"1. Identify the 'content_box': the bounding box that contains the actual building layout, strictly EXCLUDING the page margins, title blocks, legends, and empty whitespace. " +
-		"2. Identify all 'rooms': typical room detection. " +
-		"Return a JSON object with: " +
-		"'content_box': [ymin, xmin, ymax, xmax] (relative 0-1000), " +
-		"'rooms': list of objects with 'name', 'type', and 'rect' [ymin, xmin, ymax, xmax] (relative 0-1000). " +
-		"Ensure the output is valid JSON.")
+	prompt := genai.Text(`Analyze this architectural floor plan image.
+1. Identify the 'content_box': This is the bounding box that tightly encloses the main building layout (walls and rooms). 
+   CRITICAL: You MUST EXCLUDE all engineering margins, title blocks, legends, scale bars, compass roses, and large areas of empty whitespace around the building.
+   The goal is to crop the image to show only the functional floor plan.
+2. Identify all functional 'rooms' and spaces (Offices, Meeting Rooms, Hallways, etc.).
+   For each room, provide:
+   - 'name': The text label found in the room (e.g., "Office 101", "Conf Room A"). If no label, use a descriptive name.
+   - 'type': Categorize as "OFFICE", "MEETING", "HALLWAY", or "UNKNOWN".
+   - 'rect': The bounding box of the room's interior space.
+
+Return a strictly valid JSON object (no markdown formatting) with this schema:
+{
+  "content_box": [ymin, xmin, ymax, xmax],
+  "rooms": [
+    { "name": "string", "type": "string", "rect": [ymin, xmin, ymax, xmax] }
+  ]
+}
+All coordinates MUST be integers on a relative scale of 0 to 1000, where [0,0] is top-left and [1000,1000] is bottom-right of the original image.`)
 
 	// Create data part based on mimeType
 	var part genai.Part

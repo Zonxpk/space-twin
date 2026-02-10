@@ -9,49 +9,49 @@
 - [X] T001 Verify backend environment and Google Cloud credentials in backend/
 - [X] T002 Verify frontend environment and dependencies in frontend/
 - [X] T003 Create backend/ai/render.go interface for PDF rasterization strategy
-- [ ] T004 Create backend/models package for shared data structures (Room, Floorplan)
+- [X] T004 Create backend/models package for shared data structures (Room, Floorplan)
 
 ## Phase 2: Foundational Components (Blocking)
 
-- [ ] T005 Implement go-fitz or fallback PDF rendering logic in backend/ai/pdf.go
-- [ ] T006 Update backend/ai/gemini.go prompt to strictly exclude legends/margins
-- [ ] T007 Implement strict coordinate mapping and cropping logic unit tests in backend/handler/upload_test.go
-- [ ] T008 Refactor backend/handler/upload.go to use new models and render packages
+- [X] T005 Implement go-fitz or fallback PDF rendering logic in backend/ai/pdf.go
+- [X] T006 Update backend/ai/gemini.go prompt to strictly exclude legends/margins
+- [X] T007 Implement strict coordinate mapping and cropping logic unit tests in backend/handler/upload_test.go
+- [X] T008 Refactor backend/handler/upload.go to use new models and render packages
 
 ## Phase 3: User Story 1 - Upload and Process Floorplan
 
 **Goal**: Users can upload a PDF and see a clean, cropped image with rooms detected.
 
-- [ ] T009 [US1] Update backend/handler/upload.go to handle multipart uploads and trigger pipeline
-- [ ] T010 [P] [US1] Implement frontend Upload.vue component with drag-and-drop
-- [ ] T011 [US1] Connect frontend upload to backend API in frontend/src/views/Home.vue
-- [ ] T012 [US1] Display raw processing results (JSON) in frontend for debugging (temporary)
-- [ ] T013 [US1] Implement "Loading" state in frontend while processing
+- [X] T009 [US1] Update backend/handler/upload.go to handle multipart uploads and trigger pipeline
+- [X] T010 [P] [US1] Implement frontend Upload.vue component with drag-and-drop
+- [X] T011 [US1] Connect frontend upload to backend API in frontend/src/views/Home.vue
+- [X] T012 [US1] Display raw processing results (JSON) in frontend for debugging (temporary)
+- [X] T013 [US1] Implement "Loading" state in frontend while processing
 
 ## Phase 4: User Story 2 - View Interactive Map
 
 **Goal**: Users see the spotlight effect and interactive rooms.
 
-- [ ] T014 [US2] Update FloorplanMap.vue to accept image and rooms props from API response
-- [ ] T015 [P] [US2] Implement Konva "spotlight" layer (dimmed background with clear holes)
-- [ ] T016 [P] [US2] Add hover interactions (tooltip/highlight) for rooms in FloorplanMap.vue
-- [ ] T017 [US2] Integrate FloorplanMap.vue into Home.vue with real data
+- [X] T014 [US2] Update FloorplanMap.vue to accept image and rooms props from API response
+- [X] T015 [P] [US2] Implement Konva "spotlight" layer (dimmed background with clear holes)
+- [X] T016 [P] [US2] Add hover interactions (tooltip/highlight) for rooms in FloorplanMap.vue
+- [X] T017 [US2] Integrate FloorplanMap.vue into Home.vue with real data
 
 ## Phase 5: User Story 3 - Real-Time Status Monitoring
 
 **Goal**: Live updates via WebSocket.
 
-- [ ] T018 [US3] Implement WebSocket Hub in backend/realtime/hub.go to manage clients
-- [ ] T019 [US3] Add subscribe message handling in backend
-- [ ] T020 [US3] Create endpoint/method to trigger status updates (simulated for now) in backend/main.go
-- [ ] T021 [P] [US3] Implement WebSocket client service in frontend/services/websocket.js
-- [ ] T022 [US3] Wire up WebSocket events to update rooms state in Home.vue
+- [X] T018 [US3] Implement WebSocket Hub in backend/realtime/hub.go to manage clients
+- [X] T019 [US3] Add subscribe message handling in backend
+- [X] T020 [US3] Create endpoint/method to trigger status updates (simulated for now) in backend/main.go
+- [X] T021 [P] [US3] Implement WebSocket client service in frontend/services/websocket.js
+- [X] T022 [US3] Wire up WebSocket events to update rooms state in Home.vue
 
 ## Phase 6: Polish & Cross-Cutting
 
-- [ ] T023 Add error handling for invalid PDFs or failed AI processing
-- [ ] T024 Add "Retry" mechanism in frontend
-- [ ] T025 Finalize UI styling (Tailwind/CSS)
+- [X] T023 Add error handling for invalid PDFs or failed AI processing
+- [X] T024 Add "Retry" mechanism in frontend
+- [X] T025 Finalize UI styling (Tailwind/CSS)
 
 ## Dependencies
 

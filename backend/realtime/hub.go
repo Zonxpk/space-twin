@@ -19,9 +19,9 @@ var upgrader = websocket.Upgrader{
 }
 
 type Hub struct {
-	clients map[*websocket.Conn]bool
+	clients   map[*websocket.Conn]bool
 	broadcast chan []byte
-	mutex sync.Mutex
+	mutex     sync.Mutex
 }
 
 func NewHub() *Hub {
@@ -85,16 +85,21 @@ func (h *Hub) HandleWebSocket(c *gin.Context) {
 
 func (h *Hub) broadcastSimulation() {
 	// Simulate room data
+	statuses := []string{"AVAILABLE", "BUSY", "OFFLINE"}
+
 	updates := []map[string]interface{}{
-		{"name": "Lobby", "temperature": 20 + rand.Intn(5), "occupancy": rand.Intn(10)},
-		{"name": "Office 101", "temperature": 21 + rand.Intn(3), "occupancy": rand.Intn(2)},
-		{"name": "Meeting Room A", "temperature": 22 + rand.Intn(2), "occupancy": rand.Intn(5)},
+		{"name": "Lobby", "status": statuses[rand.Intn(2)], "occupancy": rand.Intn(10)}, // AVAILABLE or BUSY
+		{"name": "Office 101", "status": statuses[rand.Intn(3)], "occupancy": rand.Intn(2)},
+		{"name": "Meeting Room A", "status": "BUSY", "occupancy": rand.Intn(5)}, // Usually busy
 	}
+
+	// Add random updates for other rooms potentially found
+	// In real app, we would track rooms by ID.
 
 	msg, _ := json.Marshal(map[string]interface{}{
 		"type": "update",
 		"data": updates,
 	})
-	
+
 	h.broadcast <- msg
 }

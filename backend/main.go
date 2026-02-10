@@ -35,10 +35,11 @@ func main() {
 		c.JSON(http.StatusOK, gin.H{"message": "SmartFloor Backend Running"})
 	})
 
-	r.POST("/upload", handler.UploadFloorplan)
-	
-	// Debug Routes
-	r.POST("/debug/crop", handler.DebugCrop)
+	api := r.Group("/api/v1")
+	{
+		api.POST("/upload", handler.UploadFloorplan)
+		api.POST("/debug/crop", handler.DebugCrop)
+	}
 
 	r.GET("/ws", func(c *gin.Context) {
 		hub.HandleWebSocket(c)

@@ -1,5 +1,5 @@
 <template>
-  <div 
+  <div
     class="upload-container"
     :class="{ 'is-dragover': isDragOver }"
     @dragover.prevent="isDragOver = true"
@@ -15,11 +15,11 @@
       <p class="icon">📂</p>
       <h3>Click or Drag & Drop to Upload</h3>
       <p class="subtext">Supports Images (PNG, JPG) and PDF</p>
-      <input 
-        type="file" 
+      <input
+        type="file"
         ref="fileInput"
-        @change="handleFileSelect" 
-        accept="image/*,application/pdf" 
+        @change="handleFileSelect"
+        accept="image/*,application/pdf"
         style="display: none"
       />
     </div>
@@ -28,9 +28,9 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref } from "vue";
 
-const emit = defineEmits(['analysis-complete']);
+const emit = defineEmits(["analysis-complete"]);
 
 const fileInput = ref(null);
 const isDragOver = ref(false);
@@ -38,24 +38,24 @@ const uploading = ref(false);
 const error = ref(null);
 
 const triggerFileInput = () => {
-    if (!uploading.value) {
-        fileInput.value.click();
-    }
+  if (!uploading.value) {
+    fileInput.value.click();
+  }
 };
 
 const handleFileSelect = (event) => {
-    const file = event.target.files[0];
-    if (file) {
-        processFile(file);
-    }
+  const file = event.target.files[0];
+  if (file) {
+    processFile(file);
+  }
 };
 
 const handleDrop = (event) => {
-    isDragOver.value = false;
-    const file = event.dataTransfer.files[0];
-    if (file) {
-        processFile(file);
-    }
+  isDragOver.value = false;
+  const file = event.dataTransfer.files[0];
+  if (file) {
+    processFile(file);
+  }
 };
 
 const processFile = async (file) => {
@@ -63,11 +63,11 @@ const processFile = async (file) => {
   error.value = null;
 
   const formData = new FormData();
-  formData.append('file', file);
+  formData.append("file", file);
 
   try {
-    const response = await fetch('http://localhost:8080/upload', {
-      method: 'POST',
+    const response = await fetch("http://localhost:8080/api/v1/upload", {
+      method: "POST",
       body: formData,
     });
 
@@ -76,10 +76,10 @@ const processFile = async (file) => {
     }
 
     const data = await response.json();
-    emit('analysis-complete', { rooms: data.rooms, image: data.image });
+    emit("analysis-complete", { rooms: data.rooms, image: data.image });
   } catch (err) {
     console.error(err);
-    error.value = err.message || 'Failed to analyze floorplan';
+    error.value = err.message || "Failed to analyze floorplan";
   } finally {
     uploading.value = false;
   }
@@ -119,14 +119,14 @@ const processFile = async (file) => {
 }
 
 .icon {
-    font-size: 3rem;
-    margin-bottom: 10px;
+  font-size: 3rem;
+  margin-bottom: 10px;
 }
 
 .subtext {
-    color: #777;
-    font-size: 0.9rem;
-    margin-top: 5px;
+  color: #777;
+  font-size: 0.9rem;
+  margin-top: 5px;
 }
 
 .error {
@@ -148,7 +148,11 @@ const processFile = async (file) => {
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 </style>
