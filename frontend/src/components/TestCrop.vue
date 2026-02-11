@@ -35,22 +35,17 @@
           v-show="isPdfResult"
         ></canvas>
         <img
-          v-if="result && (result.original || result.file) && !isPdfResult"
-          :src="result.original || result.file"
+          v-if="result && result.file && !isPdfResult"
+          :src="result.file"
           alt="Original Image"
         />
       </div>
       <div class="image-box">
         <h3>Cropped</h3>
-        <img
-          v-if="result && result.cropped"
-          :src="result.cropped"
-          alt="Image with Bounding Box"
-        />
+        <p>Cropped view not available in debug endpoint</p>
       </div>
     </div>
 
-    <div v-if="result" class="info">{{ result.info }}</div>
     <div v-if="result && result.content_box" style="margin-top: 12px">
       <strong>Detected content_box:</strong>
       <pre style="margin: 6px 0; background: #222; color: #fff; padding: 8px">{{
@@ -60,25 +55,26 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, watch, computed } from "vue";
 import * as pdfjsLib from "pdfjs-dist";
 import { useMutation } from "@tanstack/vue-query";
 import { debugCropMutation } from "../client/@tanstack/vue-query.gen";
+import type { DebugCropResponse } from "../client/types.gen";
 
 // Set worker source for pdfjs-dist
 pdfjsLib.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
 
-const selectedFile = ref(null);
-const previewUrl = ref(null);
-const result = ref(null);
+const selectedFile = ref<File | null>(null);
+const previewUrl = ref<string | null>(null);
+const result = ref<DebugCropResponse | null>(null);
 const loading = ref(false);
-const error = ref(null);
-const pdfCanvas = ref(null);
+const error = ref<string | null>(null);
+const pdfCanvas = ref<HTMLCanvasElement | null>(null);
 
 const isPdfResult = computed(() => {
   return (
-    result.value && (result.value.pdf || result.value.file_type === ".pdf")
+    result.value && (result.value.file || result.value.file_type === ".pdf")
   );
 });
 
@@ -87,14 +83,16 @@ const { mutateAsync: debugCrop } = useMutation({
 });
 
 watch(result, (newResult) => {
-  if (newResult && (newResult.pdf || newResult.file_type === ".pdf")) {
-    renderPdfResult(newResult.pdf || newResult.file, newResult.content_box);
+  if (newResult && (newResult.file || newResult.file_type === ".pdf")) {
+    // result.value.file is optional string in DebugCropResponse
+    renderPdfResult(newResult.file || "", newResult.content_box);
   }
 });
 
-const handleFileSelect = async (event) => {
-  const file = event.target.files[0];
-  selectedFile.value = file;
+const handleFileSelect = async (event: Event) => {
+  const target = event.target as HTMLInputElement;
+  const file = target.files?.[0];
+  selectedFile.value = file || null;
   previewUrl.value = null;
   error.value = null;
 
@@ -110,12 +108,16 @@ const handleFileSelect = async (event) => {
       const viewport = page.getViewport({ scale: 1.5 });
       const canvas = document.createElement("canvas");
       const context = canvas.getContext("2d");
+      if (!context) throw new Error("Could not get 2d context");
+
       canvas.height = viewport.height;
       canvas.width = viewport.width;
 
       const renderContext = {
         canvasContext: context,
         viewport: viewport,
+        transform: undefined as any,
+        canvas: context.canvas,
       };
       await page.render(renderContext).promise;
 
@@ -123,18 +125,24 @@ const handleFileSelect = async (event) => {
     } else if (file.type.startsWith("image/")) {
       const reader = new FileReader();
       reader.onload = (e) => {
-        previewUrl.value = e.target.result;
+        if (e.target?.result) {
+          previewUrl.value = e.target.result as string;
+        }
       };
       reader.readAsDataURL(file);
     }
-  } catch (err) {
+  } catch (err: any) {
     console.error("Error previewing file:", err);
     error.value = "Failed to create preview: " + err.message;
   }
 };
 
-const renderPdfResult = async (pdfData, contentBox) => {
+const renderPdfResult = async (
+  pdfData: string,
+  contentBox: [number, number, number, number] | undefined,
+) => {
   try {
+    if (!pdfData) return;
     // pdfData is base64 string from server
     const loadingTask = pdfjsLib.getDocument({
       data: atob(pdfData.split(",")[1]),
@@ -147,12 +155,16 @@ const renderPdfResult = async (pdfData, contentBox) => {
     if (!canvas) return;
 
     const context = canvas.getContext("2d");
+    if (!context) return;
+
     canvas.height = viewport.height;
     canvas.width = viewport.width;
 
     const renderContext = {
       canvasContext: context,
       viewport: viewport,
+      transform: undefined as any,
+      canvas: context.canvas,
     };
     await page.render(renderContext).promise;
 
@@ -168,7 +180,7 @@ const renderPdfResult = async (pdfData, contentBox) => {
         ((yMax - yMin) / 1000) * canvas.height,
       );
     }
-  } catch (err) {
+  } catch (err: any) {
     console.error("Error rendering result PDF:", err);
     error.value = "Failed to render result PDF: " + err.message;
   }
@@ -190,8 +202,8 @@ const submitFile = async () => {
     });
 
     console.log("Received data:", data);
-    result.value = data;
-  } catch (e) {
+    result.value = data as DebugCropResponse;
+  } catch (e: any) {
     console.error(e);
     error.value = e.message;
   } finally {
