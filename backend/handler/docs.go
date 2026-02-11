@@ -12,7 +12,7 @@ func GetOpenAPISpec(c *gin.Context) {
 	// Try multiple paths to be robust against CWD (backend/ vs root)
 	paths := []string{
 		filepath.Join("..", "specs", "001-pdf-floorplan-conversion", "contracts", "api.yaml"), // Run from backend/
-		filepath.Join("specs", "001-pdf-floorplan-conversion", "contracts", "api.yaml"),     // Run from root
+		filepath.Join("specs", "001-pdf-floorplan-conversion", "contracts", "api.yaml"),       // Run from root
 	}
 
 	var content []byte

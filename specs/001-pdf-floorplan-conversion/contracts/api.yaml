@@ -23,15 +23,15 @@ paths:
               required:
                 - file
       responses:
-        '200':
+        "200":
           description: Successful processing
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/FloorplanResponse'
-        '400':
+                $ref: "#/components/schemas/FloorplanResponse"
+        "400":
           description: Invalid input
-        '500':
+        "500":
           description: Processing error
 
   /ws:
@@ -39,7 +39,7 @@ paths:
       summary: WebSocket connection for real-time updates
       description: Connects to the real-time hub. Supports `subscribe` messages.
       responses:
-        '101':
+        "101":
           description: Switching Protocols
 
 components:
@@ -60,8 +60,8 @@ components:
         rooms:
           type: array
           items:
-            $ref: '#/components/schemas/Room'
-    
+            $ref: "#/components/schemas/Room"
+
     Room:
       type: object
       properties:
@@ -78,7 +78,7 @@ components:
             type: integer
           minItems: 4
           maxItems: 4
-          description: [x, y, width, height] in pixels relative to the cropped image
+          description: "[x, y, width, height] in pixels relative to the cropped image"
         status:
           type: string
           enum: [AVAILABLE, BUSY, OFFLINE]
