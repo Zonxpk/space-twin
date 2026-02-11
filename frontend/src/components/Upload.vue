@@ -1,6 +1,8 @@
 <script setup>
 import { ref } from "vue";
 import * as pdfjsLib from "pdfjs-dist";
+import { useMutation } from "@tanstack/vue-query";
+import { uploadFloorplanMutation } from "../client/@tanstack/vue-query.gen";
 
 // We will set the worker path dynamically before rendering.
 // This is a more robust way to handle it with bundlers like Vite.
@@ -35,6 +37,10 @@ const handleFileSelect = (event) => {
   }
 };
 
+const { mutateAsync: uploadFloorplan } = useMutation({
+  ...uploadFloorplanMutation(),
+});
+
 const processFile = async (file) => {
   uploading.value = true;
   error.value = null;
@@ -47,20 +53,11 @@ const processFile = async (file) => {
       fileToUpload = await convertPdfToImage(file);
     }
 
-    const formData = new FormData();
-    formData.append("file", fileToUpload);
-
-    const response = await fetch("http://localhost:8080/api/v1/upload", {
-      method: "POST",
-      body: formData,
+    const data = await uploadFloorplan({
+      body: {
+        file: fileToUpload,
+      },
     });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      // If the server returns an error, 'data' will contain the error message
-      throw new Error(data.error || `Upload failed: ${response.statusText}`);
-    }
 
     emit("analysis-complete", { rooms: data.rooms, image: data.image });
   } catch (err) {

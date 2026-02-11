@@ -3,8 +3,8 @@
 import { type DefaultError, queryOptions, type UseMutationOptions } from '@tanstack/vue-query';
 
 import { client } from '../client.gen';
-import { getWs, type Options, uploadFloorplan } from '../sdk.gen';
-import type { GetWsData, UploadFloorplanData, UploadFloorplanResponse } from '../types.gen';
+import { debugCrop, getWs, type Options, uploadFloorplan } from '../sdk.gen';
+import type { DebugCropData, DebugCropResponse, GetWsData, UploadFloorplanData, UploadFloorplanResponse } from '../types.gen';
 
 /**
  * Upload a floorplan PDF/Image for processing
@@ -75,3 +75,20 @@ export const getWsOptions = (options?: Options<GetWsData>) => queryOptions<unkno
     },
     queryKey: getWsQueryKey(options)
 });
+
+/**
+ * Debug endpoint for testing image cropping
+ */
+export const debugCropMutation = (options?: Partial<Options<DebugCropData>>): UseMutationOptions<DebugCropResponse, DefaultError, Options<DebugCropData>> => {
+    const mutationOptions: UseMutationOptions<DebugCropResponse, DefaultError, Options<DebugCropData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await debugCrop({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};

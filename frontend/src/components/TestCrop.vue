@@ -63,6 +63,8 @@
 <script setup>
 import { ref, watch, computed } from "vue";
 import * as pdfjsLib from "pdfjs-dist";
+import { useMutation } from "@tanstack/vue-query";
+import { debugCropMutation } from "../client/@tanstack/vue-query.gen";
 
 // Set worker source for pdfjs-dist
 pdfjsLib.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
@@ -78,6 +80,10 @@ const isPdfResult = computed(() => {
   return (
     result.value && (result.value.pdf || result.value.file_type === ".pdf")
   );
+});
+
+const { mutateAsync: debugCrop } = useMutation({
+  ...debugCropMutation(),
 });
 
 watch(result, (newResult) => {
@@ -175,22 +181,14 @@ const submitFile = async () => {
   error.value = null;
   result.value = null;
 
-  const formData = new FormData();
-  formData.append("file", selectedFile.value);
-
   try {
     console.log("Sending request to /api/v1/debug/crop...");
-    const response = await fetch("http://localhost:8080/api/v1/debug/crop", {
-      method: "POST",
-      body: formData,
+    const data = await debugCrop({
+      body: {
+        file: selectedFile.value,
+      },
     });
 
-    if (!response.ok) {
-      const errText = await response.text();
-      throw new Error(`Server Error ${response.status}: ${errText}`);
-    }
-
-    const data = await response.json();
     console.log("Received data:", data);
     result.value = data;
   } catch (e) {

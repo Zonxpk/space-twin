@@ -42,6 +42,48 @@ paths:
         "101":
           description: Switching Protocols
 
+  /debug/crop:
+    post:
+      summary: Debug endpoint for testing image cropping
+      operationId: debugCrop
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: The image or PDF file to crop
+              required:
+                - file
+      responses:
+        "200":
+          description: Successful crop analysis
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  file:
+                    type: string
+                    description: Base64 encoded file data
+                  content_box:
+                    type: array
+                    items:
+                      type: integer
+                    minItems: 4
+                    maxItems: 4
+                    description: "[ymin, xmin, ymax, xmax] bounding box"
+                  file_type:
+                    type: string
+                    description: File extension (e.g., .png, .pdf)
+        "400":
+          description: Invalid input
+        "500":
+          description: Processing error
+
 components:
   schemas:
     FloorplanResponse:

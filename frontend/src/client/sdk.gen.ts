@@ -2,7 +2,7 @@
 
 import { type Client, formDataBodySerializer, type Options as Options2, type TDataShape } from './client';
 import { client } from './client.gen';
-import type { GetWsData, UploadFloorplanData, UploadFloorplanErrors, UploadFloorplanResponses } from './types.gen';
+import type { DebugCropData, DebugCropErrors, DebugCropResponses, GetWsData, UploadFloorplanData, UploadFloorplanErrors, UploadFloorplanResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
     /**
@@ -37,3 +37,16 @@ export const uploadFloorplan = <ThrowOnError extends boolean = false>(options?: 
  * Connects to the real-time hub. Supports `subscribe` messages.
  */
 export const getWs = <ThrowOnError extends boolean = false>(options?: Options<GetWsData, ThrowOnError>) => (options?.client ?? client).get<unknown, unknown, ThrowOnError>({ url: '/ws', ...options });
+
+/**
+ * Debug endpoint for testing image cropping
+ */
+export const debugCrop = <ThrowOnError extends boolean = false>(options?: Options<DebugCropData, ThrowOnError>) => (options?.client ?? client).post<DebugCropResponses, DebugCropErrors, ThrowOnError>({
+    ...formDataBodySerializer,
+    url: '/debug/crop',
+    ...options,
+    headers: {
+        'Content-Type': null,
+        ...options?.headers
+    }
+});

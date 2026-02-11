@@ -69,3 +69,53 @@ export type GetWsData = {
     query?: never;
     url: '/ws';
 };
+
+export type DebugCropData = {
+    body?: {
+        /**
+         * The image or PDF file to crop
+         */
+        file: Blob | File;
+    };
+    path?: never;
+    query?: never;
+    url: '/debug/crop';
+};
+
+export type DebugCropErrors = {
+    /**
+     * Invalid input
+     */
+    400: unknown;
+    /**
+     * Processing error
+     */
+    500: unknown;
+};
+
+export type DebugCropResponses = {
+    /**
+     * Successful crop analysis
+     */
+    200: {
+        /**
+         * Base64 encoded file data
+         */
+        file?: string;
+        /**
+         * [ymin, xmin, ymax, xmax] bounding box
+         */
+        content_box?: [
+            number,
+            number,
+            number,
+            number
+        ];
+        /**
+         * File extension (e.g., .png, .pdf)
+         */
+        file_type?: string;
+    };
+};
+
+export type DebugCropResponse = DebugCropResponses[keyof DebugCropResponses];
