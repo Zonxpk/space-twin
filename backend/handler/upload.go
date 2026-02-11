@@ -49,12 +49,14 @@ if mimeType == "" {
 mimeType = "image/png" // Default fallback
 }
 } else if ext == ".pdf" {
-isValid = true
-mimeType = "application/pdf"
+// DEPRECATED: PDF should be converted on frontend now.
+// But if sent, we reject it as we removed backend rendering.
+c.JSON(http.StatusBadRequest, gin.H{"error": "PDF files should be processed by client. Please retry."})
+return
 }
 
 if !isValid {
-c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid file type. Only PNG, JPG, and PDF are supported."})
+c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid file type. Only PNG and JPG are supported."})
 return
 }
 
@@ -69,13 +71,10 @@ return
 // 4. Process Image and Remap Coordinates
 finalImageBase64, remappedRooms, err := processAndRemap(fileBytes, jsonResponse, mimeType)
 if err != nil {
-fmt.Printf("Processing Error: %v\n", err)
-// Fallback to original if processing fails
-c.Header("Content-Type", "application/json")
-c.String(http.StatusOK, jsonResponse)
-return
-}
-
+		// Send a specific error message back to the frontend
+		errorMsg := "Failed to process image after analysis: " + err.Error()
+		fmt.Println("Processing Error:", errorMsg) // Keep server log
+		c.JSON(http.StatusInternalServerError, gin.H{"error": errorMsg})
 c.JSON(http.StatusOK, gin.H{
 "rooms": remappedRooms,
 "image": finalImageBase64,
@@ -102,19 +101,10 @@ if len(aiData.ContentBox) != 4 {
 return "", nil, fmt.Errorf("no valid content_box found")
 }
 
-// B. Decode Image (or Render PDF)
-var img image.Image
-var err error
-if mimeType == "application/pdf" {
-img, err = ai.ConvertPDFToImage(fileBytes)
-if err != nil {
-return "", nil, fmt.Errorf("pdf render error: %w", err)
-}
-} else {
-img, _, err = image.Decode(bytes.NewReader(fileBytes))
+// B. Decode Image
+img, _, err := image.Decode(bytes.NewReader(fileBytes))
 if err != nil {
 return "", nil, fmt.Errorf("image decode error: %w", err)
-}
 }
 
 // C. Calculate Crop and Remap

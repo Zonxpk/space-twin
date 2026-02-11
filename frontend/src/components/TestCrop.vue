@@ -13,16 +13,30 @@
       <button @click="$emit('close')">Close Debug</button>
     </div>
 
+    <!-- Client-side Preview -->
+    <div v-if="previewUrl" class="image-box" style="margin-bottom: 20px">
+      <h3>Client Preview</h3>
+      <img
+        :src="previewUrl"
+        alt="Client Preview"
+        style="max-width: 100%; border: 2px solid #666"
+      />
+    </div>
+
     <div v-if="loading">Processing...</div>
     <div v-if="error" style="color: red; font-weight: bold">{{ error }}</div>
 
     <div v-if="result" class="comparison">
       <div class="image-box">
-        <h3>Original</h3>
-        <canvas ref="pdfCanvas" class="pdf-canvas"></canvas>
+        <h3>Original (from Server)</h3>
+        <canvas
+          ref="pdfCanvas"
+          class="pdf-canvas"
+          v-show="isPdfResult"
+        ></canvas>
         <img
-          v-if="result && result.original"
-          :src="result.original"
+          v-if="result && (result.original || result.file) && !isPdfResult"
+          :src="result.original || result.file"
           alt="Original Image"
         />
       </div>
@@ -47,59 +61,111 @@
 </template>
 
 <script setup>
-import { ref, watch } from "vue";
+import { ref, watch, computed } from "vue";
+import * as pdfjsLib from "pdfjs-dist";
+
+// Set worker source for pdfjs-dist
+pdfjsLib.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
 
 const selectedFile = ref(null);
+const previewUrl = ref(null);
 const result = ref(null);
 const loading = ref(false);
 const error = ref(null);
 const pdfCanvas = ref(null);
 
+const isPdfResult = computed(() => {
+  return (
+    result.value && (result.value.pdf || result.value.file_type === ".pdf")
+  );
+});
+
 watch(result, (newResult) => {
-  if (newResult && newResult.pdf) {
-    renderPdf(newResult.pdf, newResult.content_box);
+  if (newResult && (newResult.pdf || newResult.file_type === ".pdf")) {
+    renderPdfResult(newResult.pdf || newResult.file, newResult.content_box);
   }
 });
 
-const renderPdf = async (pdfData, contentBox) => {
-  const pdfjsLib = window["pdfjs-dist/build/pdf"];
-  pdfjsLib.GlobalWorkerOptions.workerSrc =
-    "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.worker.min.js";
+const handleFileSelect = async (event) => {
+  const file = event.target.files[0];
+  selectedFile.value = file;
+  previewUrl.value = null;
+  error.value = null;
 
-  const loadingTask = pdfjsLib.getDocument({
-    data: atob(pdfData.split(",")[1]),
-  });
-  const pdf = await loadingTask.promise;
-  const page = await pdf.getPage(1);
-  const viewport = page.getViewport({ scale: 1.5 });
+  if (!file) return;
 
-  const canvas = pdfCanvas.value;
-  const context = canvas.getContext("2d");
-  canvas.height = viewport.height;
-  canvas.width = viewport.width;
+  try {
+    if (file.type === "application/pdf") {
+      const arrayBuffer = await file.arrayBuffer();
+      const loadingTask = pdfjsLib.getDocument(arrayBuffer);
+      const pdf = await loadingTask.promise;
+      const page = await pdf.getPage(1);
 
-  const renderContext = {
-    canvasContext: context,
-    viewport: viewport,
-  };
-  await page.render(renderContext).promise;
+      const viewport = page.getViewport({ scale: 1.5 });
+      const canvas = document.createElement("canvas");
+      const context = canvas.getContext("2d");
+      canvas.height = viewport.height;
+      canvas.width = viewport.width;
 
-  if (contentBox) {
-    const [yMin, xMin, yMax, xMax] = contentBox;
-    context.strokeStyle = "red";
-    context.lineWidth = 2;
-    context.setLineDash([10, 5]);
-    context.strokeRect(
-      (xMin / 1000) * canvas.width,
-      (yMin / 1000) * canvas.height,
-      ((xMax - xMin) / 1000) * canvas.width,
-      ((yMax - yMin) / 1000) * canvas.height,
-    );
+      const renderContext = {
+        canvasContext: context,
+        viewport: viewport,
+      };
+      await page.render(renderContext).promise;
+
+      previewUrl.value = canvas.toDataURL("image/png");
+    } else if (file.type.startsWith("image/")) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        previewUrl.value = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+  } catch (err) {
+    console.error("Error previewing file:", err);
+    error.value = "Failed to create preview: " + err.message;
   }
 };
 
-const handleFileSelect = (event) => {
-  selectedFile.value = event.target.files[0];
+const renderPdfResult = async (pdfData, contentBox) => {
+  try {
+    // pdfData is base64 string from server
+    const loadingTask = pdfjsLib.getDocument({
+      data: atob(pdfData.split(",")[1]),
+    });
+    const pdf = await loadingTask.promise;
+    const page = await pdf.getPage(1);
+    const viewport = page.getViewport({ scale: 1.5 });
+
+    const canvas = pdfCanvas.value;
+    if (!canvas) return;
+
+    const context = canvas.getContext("2d");
+    canvas.height = viewport.height;
+    canvas.width = viewport.width;
+
+    const renderContext = {
+      canvasContext: context,
+      viewport: viewport,
+    };
+    await page.render(renderContext).promise;
+
+    if (contentBox) {
+      const [yMin, xMin, yMax, xMax] = contentBox;
+      context.strokeStyle = "red";
+      context.lineWidth = 2;
+      context.setLineDash([10, 5]);
+      context.strokeRect(
+        (xMin / 1000) * canvas.width,
+        (yMin / 1000) * canvas.height,
+        ((xMax - xMin) / 1000) * canvas.width,
+        ((yMax - yMin) / 1000) * canvas.height,
+      );
+    }
+  } catch (err) {
+    console.error("Error rendering result PDF:", err);
+    error.value = "Failed to render result PDF: " + err.message;
+  }
 };
 
 const submitFile = async () => {
@@ -113,8 +179,8 @@ const submitFile = async () => {
   formData.append("file", selectedFile.value);
 
   try {
-    console.log("Sending request to /debug/crop...");
-    const response = await fetch("http://localhost:8080/debug/crop", {
+    console.log("Sending request to /api/v1/debug/crop...");
+    const response = await fetch("http://localhost:8080/api/v1/debug/crop", {
       method: "POST",
       body: formData,
     });
