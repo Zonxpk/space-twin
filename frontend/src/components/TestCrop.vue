@@ -13,8 +13,12 @@
       <button @click="$emit('close')">Close Debug</button>
     </div>
 
-    <!-- Client-side Preview -->
-    <div v-if="previewUrl" class="image-box" style="margin-bottom: 20px">
+    <!-- Client-side Preview (before crop) -->
+    <div
+      v-if="previewUrl && !result"
+      class="image-box"
+      style="margin-bottom: 20px"
+    >
       <h3>Client Preview</h3>
       <img
         :src="previewUrl"
@@ -28,21 +32,18 @@
 
     <div v-if="result" class="comparison">
       <div class="image-box">
-        <h3>Original (from Server)</h3>
-        <canvas
-          ref="pdfCanvas"
-          class="pdf-canvas"
-          v-show="isPdfResult"
-        ></canvas>
-        <img
-          v-if="result && result.file && !isPdfResult"
-          :src="result.file"
-          alt="Original Image"
-        />
+        <h3>Original with Box</h3>
+        <!-- Always use canvas for consistent drawing of box -->
+        <canvas ref="originalCanvas" class="pdf-canvas"></canvas>
       </div>
       <div class="image-box">
-        <h3>Cropped</h3>
-        <p>Cropped view not available in debug endpoint</p>
+        <h3>Cropped Client-Side</h3>
+        <img
+          v-if="croppedImageUrl"
+          :src="croppedImageUrl"
+          style="max-width: 100%; border: 2px solid #666"
+        />
+        <p v-else>No crop result</p>
       </div>
     </div>
 
@@ -56,7 +57,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, computed } from "vue";
+import { ref, watch, nextTick } from "vue";
 import * as pdfjsLib from "pdfjs-dist";
 import { useMutation } from "@tanstack/vue-query";
 import { debugCropMutation } from "../client/@tanstack/vue-query.gen";
@@ -70,22 +71,17 @@ const previewUrl = ref<string | null>(null);
 const result = ref<DebugCropResponse | null>(null);
 const loading = ref(false);
 const error = ref<string | null>(null);
-const pdfCanvas = ref<HTMLCanvasElement | null>(null);
-
-const isPdfResult = computed(() => {
-  return (
-    result.value && (result.value.file || result.value.file_type === ".pdf")
-  );
-});
+const originalCanvas = ref<HTMLCanvasElement | null>(null);
+const croppedImageUrl = ref<string | null>(null);
 
 const { mutateAsync: debugCrop } = useMutation({
   ...debugCropMutation(),
 });
 
-watch(result, (newResult) => {
-  if (newResult && (newResult.file || newResult.file_type === ".pdf")) {
-    // result.value.file is optional string in DebugCropResponse
-    renderPdfResult(newResult.file || "", newResult.content_box);
+watch(result, async (newResult) => {
+  if (newResult && newResult.content_box && previewUrl.value) {
+    await nextTick(); // Wait for canvas to be in DOM
+    renderCropResult(previewUrl.value, newResult.content_box);
   }
 });
 
@@ -95,6 +91,8 @@ const handleFileSelect = async (event: Event) => {
   selectedFile.value = file || null;
   previewUrl.value = null;
   error.value = null;
+  result.value = null;
+  croppedImageUrl.value = null;
 
   if (!file) return;
 
@@ -137,52 +135,57 @@ const handleFileSelect = async (event: Event) => {
   }
 };
 
-const renderPdfResult = async (
-  pdfData: string,
-  contentBox: [number, number, number, number] | undefined,
+const renderCropResult = async (
+  imageUrl: string,
+  contentBox: [number, number, number, number],
 ) => {
   try {
-    if (!pdfData) return;
-    // pdfData is base64 string from server
-    const loadingTask = pdfjsLib.getDocument({
-      data: atob(pdfData.split(",")[1]),
-    });
-    const pdf = await loadingTask.promise;
-    const page = await pdf.getPage(1);
-    const viewport = page.getViewport({ scale: 1.5 });
-
-    const canvas = pdfCanvas.value;
+    const canvas = originalCanvas.value;
     if (!canvas) return;
 
-    const context = canvas.getContext("2d");
-    if (!context) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
 
-    canvas.height = viewport.height;
-    canvas.width = viewport.width;
+    const img = new Image();
+    img.src = imageUrl;
+    await new Promise((resolve) => {
+      img.onload = resolve;
+    });
 
-    const renderContext = {
-      canvasContext: context,
-      viewport: viewport,
-      transform: undefined as any,
-      canvas: context.canvas,
-    };
-    await page.render(renderContext).promise;
+    canvas.width = img.width;
+    canvas.height = img.height;
+    ctx.drawImage(img, 0, 0);
 
-    if (contentBox) {
-      const [yMin, xMin, yMax, xMax] = contentBox;
-      context.strokeStyle = "red";
-      context.lineWidth = 2;
-      context.setLineDash([10, 5]);
-      context.strokeRect(
-        (xMin / 1000) * canvas.width,
-        (yMin / 1000) * canvas.height,
-        ((xMax - xMin) / 1000) * canvas.width,
-        ((yMax - yMin) / 1000) * canvas.height,
-      );
-    }
+    // Draw Box
+    const [yMin, xMin, yMax, xMax] = contentBox;
+    ctx.strokeStyle = "red";
+    ctx.lineWidth = 4;
+    ctx.setLineDash([10, 5]);
+    ctx.strokeRect(
+      (xMin / 1000) * canvas.width,
+      (yMin / 1000) * canvas.height,
+      ((xMax - xMin) / 1000) * canvas.width,
+      ((yMax - yMin) / 1000) * canvas.height,
+    );
+
+    // Crop
+    const cropW = ((xMax - xMin) / 1000) * img.width;
+    const cropH = ((yMax - yMin) / 1000) * img.height;
+    const cropX = (xMin / 1000) * img.width;
+    const cropY = (yMin / 1000) * img.height;
+
+    const cropCanvas = document.createElement("canvas");
+    cropCanvas.width = cropW;
+    cropCanvas.height = cropH;
+    const cropCtx = cropCanvas.getContext("2d");
+    if (!cropCtx) return;
+
+    cropCtx.drawImage(img, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
+
+    croppedImageUrl.value = cropCanvas.toDataURL("image/png");
   } catch (err: any) {
-    console.error("Error rendering result PDF:", err);
-    error.value = "Failed to render result PDF: " + err.message;
+    console.error("Error rendering crop result:", err);
+    error.value = "Failed to render crop result: " + err.message;
   }
 };
 
@@ -192,6 +195,7 @@ const submitFile = async () => {
   loading.value = true;
   error.value = null;
   result.value = null;
+  croppedImageUrl.value = null;
 
   try {
     console.log("Sending request to /api/v1/debug/crop...");
@@ -233,11 +237,14 @@ const submitFile = async () => {
 }
 .comparison {
   display: flex;
+  flex-direction: row;
   gap: 20px;
   margin-top: 20px;
 }
 .image-box {
   flex: 1;
+  min-width: 0;
+  box-sizing: border-box;
   border: 1px solid #ddd;
   padding: 10px;
   background: white;
