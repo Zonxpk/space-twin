@@ -37,6 +37,8 @@ func main() {
 
 	api := r.Group("/api/v1")
 	{
+		api.GET("/openapi.yaml", handler.GetOpenAPISpec)
+		api.GET("/docs", handler.GetSwaggerUI)
 		api.POST("/upload", handler.UploadFloorplan)
 		api.POST("/debug/crop", handler.DebugCrop)
 	}
