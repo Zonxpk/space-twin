@@ -4,11 +4,15 @@
     <p>Upload an image to test edge detection and automatic cropping.</p>
 
     <div class="controls">
-      <input
-        type="file"
-        @change="handleFileSelect"
-        accept="image/*,application/pdf"
-      />
+      <label class="file-upload-btn">
+        [ SELECT_FILE ]
+        <input
+          type="file"
+          @change="handleFileSelect"
+          accept="image/*,application/pdf"
+          class="hidden-input"
+        />
+      </label>
 
       <div class="mock-controls">
         <select v-model="selectedMockFile" @change="loadMockFile">
@@ -328,6 +332,30 @@ p {
   padding: 0.5rem;
   background: var(--color-secondary);
   border: 1px solid var(--color-cta);
+}
+
+.file-upload-btn {
+  background: transparent;
+  color: var(--color-cta);
+  border: 1px solid var(--color-cta);
+  padding: 0.5rem 1rem;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: inline-block;
+}
+
+.file-upload-btn:hover {
+  background: var(--color-cta);
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.5);
+}
+
+.hidden-input {
+  display: none;
 }
 
 button {
