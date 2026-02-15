@@ -11,12 +11,12 @@
       />
 
       <div class="mock-controls">
-        <select v-model="selectedMockFile">
+        <select v-model="selectedMockFile" @change="loadMockFile">
+          <option value="" disabled>Select Mock File</option>
           <option v-for="file in MOCK_FILES" :key="file.url" :value="file.url">
             {{ file.label }}
           </option>
         </select>
-        <button @click="loadMockFile">Load Mock</button>
       </div>
 
       <button @click="submitFile" :disabled="!selectedFile">
@@ -25,7 +25,6 @@
       <button @click="submitCrop" :disabled="!selectedFile">
         Crop Floorplan
       </button>
-      <button @click="$emit('close')">Close</button>
     </div>
 
     <!-- Client-side Preview (before detection) -->
@@ -115,7 +114,7 @@ const MOCK_FILES = [
   { label: "Site Floorplan", url: "/mock-site-floorplan.pdf" },
 ];
 
-const selectedMockFile = ref(MOCK_FILES[0].url);
+const selectedMockFile = ref("");
 const selectedFile = ref<File | null>(null);
 const result = ref<DetectEdgesResponse | null>(null);
 const cropResult = ref<{ cropped_image: string; message: string } | null>(null);
@@ -181,6 +180,7 @@ const handleFileSelect = async (event: Event) => {
   error.value = null;
   result.value = null;
   cropResult.value = null;
+  selectedMockFile.value = "";
 
   if (!file) {
     selectedFile.value = null;
