@@ -18,8 +18,12 @@
         </p>
 
         <div class="cta-group">
-          <button class="btn-primary">START_TWIN_ENGINE_</button>
-          <button class="btn-secondary">VIEW_DEMO_LOGS</button>
+          <RouterLink to="/upload" class="btn-primary"
+            >START_TWIN_ENGINE_</RouterLink
+          >
+          <RouterLink to="/test" class="btn-secondary"
+            >VIEW_DEMO_LOGS</RouterLink
+          >
         </div>
       </div>
 

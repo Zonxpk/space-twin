@@ -12,7 +12,7 @@ import { RouterLink, RouterView } from "vue-router";
       <div class="logo" data-text="SPACE_TWIN [BETA]">SPACE_TWIN [BETA]</div>
       <nav class="nav">
         <RouterLink to="/" class="nav-link">HOME</RouterLink>
-        <RouterLink to="/space-twin" class="nav-link">SPACE_TWIN</RouterLink>
+        <RouterLink to="/upload" class="nav-link">UPLOAD</RouterLink>
         <RouterLink to="/test" class="nav-link">DEBUG</RouterLink>
         <a href="#login" class="nav-link">LOGIN_</a>
       </nav>
@@ -166,6 +166,9 @@ a {
 
 /* Common Components */
 :deep(.btn-primary) {
+  display: inline-block;
+  text-decoration: none;
+  text-align: center;
   background-color: #0369a1;
   color: white;
   border: none;
@@ -181,11 +184,15 @@ a {
 
 :deep(.btn-primary:hover) {
   background-color: #0284c7;
+  color: white;
   transform: translateY(-2px);
   box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.5);
 }
 
 :deep(.btn-secondary) {
+  display: inline-block;
+  text-decoration: none;
+  text-align: center;
   background-color: transparent;
   color: #f8fafc;
   border: 1px solid #334155;

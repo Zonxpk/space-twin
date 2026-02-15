@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from "vue-router";
-import Home from "../views/Home.vue";
+import Upload from "../views/Upload.vue";
 import SpaceTwin from "../views/SpaceTwin.vue";
 import TestCrop from "../components/TestCrop.vue";
 
@@ -9,7 +9,7 @@ const router = createRouter({
     {
       path: "/",
       name: "home",
-      component: Home,
+      component: SpaceTwin,
     },
     {
       path: "/test",
@@ -17,9 +17,9 @@ const router = createRouter({
       component: TestCrop,
     },
     {
-      path: "/space-twin",
-      name: "space-twin",
-      component: SpaceTwin,
+      path: "/upload",
+      name: "upload",
+      component: Upload,
     },
   ],
 });
