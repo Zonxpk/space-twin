@@ -3,10 +3,11 @@ import { ref, onMounted, onUnmounted } from "vue";
 import Upload from "../components/Upload.vue";
 import FloorplanMap from "../components/FloorplanMap.vue";
 import { WebSocketService } from "../services/websocket";
+import { WS_BASE_URL } from "../utils/env";
 
 const rooms = ref([]);
 const bgImage = ref(null);
-const ws = new WebSocketService("ws://localhost:8080/ws");
+const ws = new WebSocketService(WS_BASE_URL);
 
 onMounted(() => {
   ws.connect();
