@@ -87,10 +87,17 @@ const resetView = () => {
 </template>
 
 <style scoped>
+/* 
+  Neo-Brutalist Upload Styles 
+  Inherits variables from App.vue
+*/
 .content-wrapper {
   min-height: 600px;
   display: flex;
   flex-direction: column;
+  padding: 2rem;
+  color: var(--color-text);
+  font-family: var(--font-mono);
 }
 
 /* Centered Upload State */
@@ -99,31 +106,41 @@ const resetView = () => {
   display: flex;
   justify-content: center;
   align-items: center;
-  flex-direction: column;
+  border: 1px dashed var(--color-secondary);
+  background: rgba(15, 23, 42, 0.5);
+  margin: 2rem;
+  min-height: 400px;
 }
 
 /* Dashboard State */
 .dashboard {
   animation: fadeIn 0.5s ease;
+  width: 100%;
 }
 
 .dashboard-header {
-  margin-bottom: 1rem;
+  margin-bottom: 2rem;
+  display: flex;
+  justify-content: flex-start;
 }
 
 .reset-btn {
-  background: none;
-  border: 1px solid #ccc;
-  padding: 8px 16px;
+  background: transparent;
+  color: var(--color-cta);
+  border: 1px solid var(--color-cta);
+  padding: 1rem 2rem;
   cursor: pointer;
-  border-radius: 4px;
-  color: #666;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  text-transform: uppercase;
   transition: all 0.2s;
 }
 
 .reset-btn:hover {
-  background: #f0f0f0;
-  color: #333;
+  background: var(--color-cta);
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.5);
 }
 
 /* Transitions */
@@ -149,13 +166,23 @@ const resetView = () => {
 }
 
 .debug-json {
-  margin-top: 20px;
-  padding: 10px;
-  background: #f4f4f4;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  max-height: 200px;
+  margin-top: 2rem;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 1rem;
+  border: 1px solid var(--color-secondary);
+  font-size: 0.8rem;
+  color: #94a3b8;
+  max-height: 300px;
   overflow-y: auto;
-  font-size: 12px;
+  font-family: var(--font-mono);
+}
+
+.debug-json h3 {
+  color: var(--color-accent);
+  margin-top: 0;
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
 </style>
