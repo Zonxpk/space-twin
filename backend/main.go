@@ -77,6 +77,7 @@ func main() {
 		api.POST("/upload", handler.UploadFloorplan)
 		api.POST("/process/edges", handler.ProcessFloorplanEdges)
 		api.POST("/process/edges-json", handler.ProcessFloorplanWithJSON)
+		api.POST("/process/crop", handler.CropFloorplanHandler)
 	}
 
 	r.GET("/ws", func(c *gin.Context) {

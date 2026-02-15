@@ -1,5 +1,37 @@
 basePath: /
 definitions:
+  handler.CropFloorplanRequest:
+    properties:
+      image:
+        description: base64 or data:image/...
+        type: string
+      options:
+        $ref: '#/definitions/handler.EdgeDetectionRequest'
+    required:
+    - image
+    type: object
+  handler.CropFloorplanResponse:
+    properties:
+      cropped_image:
+        type: string
+      message:
+        type: string
+    type: object
+  handler.EdgeDetectionRequest:
+    properties:
+      blur_radius:
+        default: 1.2
+        type: number
+      canny_high:
+        default: 150
+        type: number
+      canny_low:
+        default: 50
+        type: number
+      resize_max_width:
+        default: 800
+        type: integer
+    type: object
   handler.EdgeDetectionResponse:
     properties:
       message:
@@ -22,6 +54,41 @@ info:
   title: FloorPlan Whiteboard API
   version: "1.0"
 paths:
+  /api/v1/process/crop:
+    post:
+      consumes:
+      - application/json
+      description: Detect and crop the floorplan area from a paper document image
+      operationId: cropFloorplan
+      parameters:
+      - description: Image and edge detection options
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.CropFloorplanRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Cropped floorplan
+          schema:
+            $ref: '#/definitions/handler.CropFloorplanResponse'
+        "400":
+          description: Bad request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Automatic crop floorplan from paper
+      tags:
+      - edge-detection
   /api/v1/process/edges:
     post:
       consumes:

@@ -4,6 +4,26 @@ export type ClientOptions = {
     baseUrl: 'http://localhost:8080/' | (string & {});
 };
 
+export type HandlerCropFloorplanRequest = {
+    /**
+     * base64 or data:image/...
+     */
+    image: string;
+    options?: HandlerEdgeDetectionRequest;
+};
+
+export type HandlerCropFloorplanResponse = {
+    cropped_image?: string;
+    message?: string;
+};
+
+export type HandlerEdgeDetectionRequest = {
+    blur_radius?: number;
+    canny_high?: number;
+    canny_low?: number;
+    resize_max_width?: number;
+};
+
 export type HandlerEdgeDetectionResponse = {
     message?: string;
     /**
@@ -11,6 +31,42 @@ export type HandlerEdgeDetectionResponse = {
      */
     processed_image?: string;
 };
+
+export type CropFloorplanData = {
+    /**
+     * Image and edge detection options
+     */
+    body: HandlerCropFloorplanRequest;
+    path?: never;
+    query?: never;
+    url: '/api/v1/process/crop';
+};
+
+export type CropFloorplanErrors = {
+    /**
+     * Bad request
+     */
+    400: {
+        [key: string]: string;
+    };
+    /**
+     * Internal server error
+     */
+    500: {
+        [key: string]: string;
+    };
+};
+
+export type CropFloorplanError = CropFloorplanErrors[keyof CropFloorplanErrors];
+
+export type CropFloorplanResponses = {
+    /**
+     * Cropped floorplan
+     */
+    200: HandlerCropFloorplanResponse;
+};
+
+export type CropFloorplanResponse = CropFloorplanResponses[keyof CropFloorplanResponses];
 
 export type DetectEdgesData = {
     body: {

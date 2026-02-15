@@ -2,8 +2,27 @@
 
 import type { UseMutationOptions } from '@tanstack/vue-query';
 
-import { detectEdges, detectEdgesJson, type Options, uploadFloorplan } from '../sdk.gen';
-import type { DetectEdgesData, DetectEdgesError, DetectEdgesJsonData, DetectEdgesJsonError, DetectEdgesJsonResponse, DetectEdgesResponse, UploadFloorplanData, UploadFloorplanError, UploadFloorplanResponse } from '../types.gen';
+import { cropFloorplan, detectEdges, detectEdgesJson, type Options, uploadFloorplan } from '../sdk.gen';
+import type { CropFloorplanData, CropFloorplanError, CropFloorplanResponse, DetectEdgesData, DetectEdgesError, DetectEdgesJsonData, DetectEdgesJsonError, DetectEdgesJsonResponse, DetectEdgesResponse, UploadFloorplanData, UploadFloorplanError, UploadFloorplanResponse } from '../types.gen';
+
+/**
+ * Automatic crop floorplan from paper
+ *
+ * Detect and crop the floorplan area from a paper document image
+ */
+export const cropFloorplanMutation = (options?: Partial<Options<CropFloorplanData>>): UseMutationOptions<CropFloorplanResponse, CropFloorplanError, Options<CropFloorplanData>> => {
+    const mutationOptions: UseMutationOptions<CropFloorplanResponse, CropFloorplanError, Options<CropFloorplanData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await cropFloorplan({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
 
 /**
  * Detect edges in a floorplan image

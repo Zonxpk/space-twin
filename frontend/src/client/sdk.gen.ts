@@ -2,7 +2,7 @@
 
 import { type Client, formDataBodySerializer, type Options as Options2, type TDataShape } from './client';
 import { client } from './client.gen';
-import type { DetectEdgesData, DetectEdgesErrors, DetectEdgesJsonData, DetectEdgesJsonErrors, DetectEdgesJsonResponses, DetectEdgesResponses, UploadFloorplanData, UploadFloorplanErrors, UploadFloorplanResponses } from './types.gen';
+import type { CropFloorplanData, CropFloorplanErrors, CropFloorplanResponses, DetectEdgesData, DetectEdgesErrors, DetectEdgesJsonData, DetectEdgesJsonErrors, DetectEdgesJsonResponses, DetectEdgesResponses, UploadFloorplanData, UploadFloorplanErrors, UploadFloorplanResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
     /**
@@ -17,6 +17,20 @@ export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends 
      */
     meta?: Record<string, unknown>;
 };
+
+/**
+ * Automatic crop floorplan from paper
+ *
+ * Detect and crop the floorplan area from a paper document image
+ */
+export const cropFloorplan = <ThrowOnError extends boolean = false>(options: Options<CropFloorplanData, ThrowOnError>) => (options.client ?? client).post<CropFloorplanResponses, CropFloorplanErrors, ThrowOnError>({
+    url: '/api/v1/process/crop',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
 
 /**
  * Detect edges in a floorplan image

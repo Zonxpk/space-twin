@@ -223,3 +223,81 @@ func GetEdgeDataURL(img image.Image, opts EdgeDetectionOptions) (string, error) 
 	b64 := base64.StdEncoding.EncodeToString(buf.Bytes())
 	return "data:image/png;base64," + b64, nil
 }
+
+// GetLargestComponentBoundingBox finds the bounding box of the largest connected component in the edge image
+func GetLargestComponentBoundingBox(img image.Image) image.Rectangle {
+	bounds := img.Bounds()
+	width := bounds.Dx()
+	height := bounds.Dy()
+	visited := make([][]bool, height)
+	for i := range visited {
+		visited[i] = make([]bool, width)
+	}
+
+	maxArea := 0
+	maxRect := bounds
+
+	// Helper to check if pixel is "edge" (white-ish)
+	isEdge := func(x, y int) bool {
+		r, _, _, _ := img.At(x, y).RGBA()
+		return r > 0x7FFF // > 50% brightness
+	}
+
+	for y := 0; y < height; y++ {
+		for x := 0; x < width; x++ {
+			if !visited[y][x] && isEdge(x, y) {
+				// BFS to find component
+				minX, minY, maxX, maxY := x, y, x, y
+				q := []image.Point{{x, y}}
+				visited[y][x] = true
+
+				for len(q) > 0 {
+					p := q[0]
+					q = q[1:]
+
+					if p.X < minX {
+						minX = p.X
+					}
+					if p.X > maxX {
+						maxX = p.X
+					}
+					if p.Y < minY {
+						minY = p.Y
+					}
+					if p.Y > maxY {
+						maxY = p.Y
+					}
+
+					// Check neighbors
+					for dy := -1; dy <= 1; dy++ {
+						for dx := -1; dx <= 1; dx++ {
+							if dx == 0 && dy == 0 {
+								continue
+							}
+							nx, ny := p.X+dx, p.Y+dy
+							if nx >= 0 && nx < width && ny >= 0 && ny < height {
+								if !visited[ny][nx] && isEdge(nx, ny) {
+									visited[ny][nx] = true
+									q = append(q, image.Point{nx, ny})
+								}
+							}
+						}
+					}
+				}
+
+				area := (maxX - minX + 1) * (maxY - minY + 1)
+				if area > maxArea {
+					maxArea = area
+					maxRect = image.Rect(minX, minY, maxX+1, maxY+1)
+				}
+			}
+		}
+	}
+
+	return maxRect
+}
+
+// CropImage crops the image to the specified rectangle
+func CropImage(img image.Image, rect image.Rectangle) image.Image {
+	return imaging.Crop(img, rect)
+}

@@ -1,7 +1,7 @@
 <template>
   <div class="test-crop-container">
-    <h2>Debug: Image Cropping Test</h2>
-    <p>Upload an image to test backend cropping logic (No AI involved).</p>
+    <h2>Edge Detection & Crop Test</h2>
+    <p>Upload an image to test edge detection and automatic cropping.</p>
 
     <div class="controls">
       <input
@@ -10,21 +10,24 @@
         accept="image/*,application/pdf"
       />
       <button @click="submitFile" :disabled="!selectedFile">
-        Test Crop (Server)
+        Detect Edges
       </button>
-      <button @click="$emit('close')">Close Debug</button>
+      <button @click="submitCrop" :disabled="!selectedFile">
+        Crop Floorplan
+      </button>
+      <button @click="$emit('close')">Close</button>
     </div>
 
-    <!-- Client-side Preview (before crop) -->
+    <!-- Client-side Preview (before detection) -->
     <div
-      v-if="previewUrl && !result"
+      v-if="selectedFile && !result && !cropResult"
       class="image-box"
       style="margin-bottom: 20px"
     >
-      <h3>Client Preview</h3>
+      <h3>Original</h3>
       <img
-        :src="previewUrl"
-        alt="Client Preview"
+        :src="getPreviewUrl()"
+        alt="Original"
         style="max-width: 100%; border: 2px solid #666"
       />
     </div>
@@ -32,71 +35,99 @@
     <div v-if="loading">Processing...</div>
     <div v-if="error" style="color: red; font-weight: bold">{{ error }}</div>
 
+    <!-- Edge Detection Result -->
     <div v-if="result" class="comparison">
       <div class="image-box">
-        <h3>Original with Box</h3>
-        <!-- Always use canvas for consistent drawing of box -->
-        <canvas ref="originalCanvas" class="pdf-canvas"></canvas>
-      </div>
-      <div class="image-box">
-        <h3>Cropped Client-Side</h3>
+        <h3>Original</h3>
         <img
-          v-if="croppedImageUrl"
-          :src="croppedImageUrl"
+          :src="getPreviewUrl()"
+          alt="Original"
           style="max-width: 100%; border: 2px solid #666"
         />
-        <p v-else>No crop result</p>
+      </div>
+      <div class="image-box">
+        <h3>Edge Detection Result</h3>
+        <img
+          v-if="result.processed_image"
+          :src="result.processed_image"
+          style="max-width: 100%; border: 2px solid #666"
+        />
+        <p v-else>No result</p>
       </div>
     </div>
 
-    <div v-if="result && result.content_box" style="margin-top: 12px">
-      <strong>Detected content_box:</strong>
-      <pre style="margin: 6px 0; background: #222; color: #fff; padding: 8px">{{
-        JSON.stringify(result.content_box)
-      }}</pre>
+    <!-- Crop Result -->
+    <div v-if="cropResult" class="comparison">
+      <div class="image-box">
+        <h3>Original</h3>
+        <img
+          :src="getPreviewUrl()"
+          alt="Original"
+          style="max-width: 100%; border: 2px solid #666"
+        />
+      </div>
+      <div class="image-box">
+        <h3>Cropped Floorplan</h3>
+        <img
+          v-if="cropResult.cropped_image"
+          :src="cropResult.cropped_image"
+          style="max-width: 100%; border: 2px solid #666"
+        />
+        <p v-else>No result</p>
+        <p
+          v-if="cropResult.message"
+          style="margin-top: 10px; font-size: 0.9em; color: #666"
+        >
+          {{ cropResult.message }}
+        </p>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, watch, nextTick } from "vue";
+import { ref } from "vue";
 import * as pdfjsLib from "pdfjs-dist";
 import { useMutation } from "@tanstack/vue-query";
-import { debugCropMutation } from "../client/@tanstack/vue-query.gen";
-import type { DebugCropResponse } from "../client/types.gen";
+import {
+  detectEdgesMutation,
+  cropFloorplanMutation,
+} from "../client/@tanstack/vue-query.gen";
+import type { DetectEdgesResponse } from "../client/types.gen";
 
 // Set worker source for pdfjs-dist
 pdfjsLib.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
 
 const selectedFile = ref<File | null>(null);
-const previewUrl = ref<string | null>(null);
-const result = ref<DebugCropResponse | null>(null);
+const result = ref<DetectEdgesResponse | null>(null);
+const cropResult = ref<{ cropped_image: string; message: string } | null>(null);
 const loading = ref(false);
 const error = ref<string | null>(null);
-const originalCanvas = ref<HTMLCanvasElement | null>(null);
-const croppedImageUrl = ref<string | null>(null);
 
-const { mutateAsync: debugCrop } = useMutation({
-  ...debugCropMutation(),
+const { mutateAsync: detectEdges } = useMutation({
+  ...detectEdgesMutation(),
 });
 
-watch(result, async (newResult) => {
-  if (newResult && newResult.content_box && previewUrl.value) {
-    await nextTick(); // Wait for canvas to be in DOM
-    renderCropResult(previewUrl.value, newResult.content_box);
-  }
+const { mutateAsync: cropFloorplan } = useMutation({
+  ...cropFloorplanMutation(),
 });
+
+const getPreviewUrl = (): string => {
+  if (!selectedFile.value) return "";
+  return URL.createObjectURL(selectedFile.value);
+};
 
 const handleFileSelect = async (event: Event) => {
   const target = event.target as HTMLInputElement;
   const file = target.files?.[0];
-  selectedFile.value = file || null;
-  previewUrl.value = null;
   error.value = null;
   result.value = null;
-  croppedImageUrl.value = null;
+  cropResult.value = null;
 
-  if (!file) return;
+  if (!file) {
+    selectedFile.value = null;
+    return;
+  }
 
   try {
     if (file.type === "application/pdf") {
@@ -121,73 +152,19 @@ const handleFileSelect = async (event: Event) => {
       };
       await page.render(renderContext).promise;
 
-      previewUrl.value = canvas.toDataURL("image/png");
-    } else if (file.type.startsWith("image/")) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        if (e.target?.result) {
-          previewUrl.value = e.target.result as string;
+      canvas.toBlob((blob) => {
+        if (blob) {
+          selectedFile.value = new File([blob], "converted.png", {
+            type: "image/png",
+          });
         }
-      };
-      reader.readAsDataURL(file);
+      }, "image/png");
+    } else if (file.type.startsWith("image/")) {
+      selectedFile.value = file;
     }
   } catch (err: any) {
     console.error("Error previewing file:", err);
     error.value = "Failed to create preview: " + err.message;
-  }
-};
-
-const renderCropResult = async (
-  imageUrl: string,
-  contentBox: [number, number, number, number],
-) => {
-  try {
-    const canvas = originalCanvas.value;
-    if (!canvas) return;
-
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    const img = new Image();
-    img.src = imageUrl;
-    await new Promise((resolve) => {
-      img.onload = resolve;
-    });
-
-    canvas.width = img.width;
-    canvas.height = img.height;
-    ctx.drawImage(img, 0, 0);
-
-    // Draw Box
-    const [yMin, xMin, yMax, xMax] = contentBox;
-    ctx.strokeStyle = "red";
-    ctx.lineWidth = 4;
-    ctx.setLineDash([10, 5]);
-    ctx.strokeRect(
-      (xMin / 1000) * canvas.width,
-      (yMin / 1000) * canvas.height,
-      ((xMax - xMin) / 1000) * canvas.width,
-      ((yMax - yMin) / 1000) * canvas.height,
-    );
-
-    // Crop
-    const cropW = ((xMax - xMin) / 1000) * img.width;
-    const cropH = ((yMax - yMin) / 1000) * img.height;
-    const cropX = (xMin / 1000) * img.width;
-    const cropY = (yMin / 1000) * img.height;
-
-    const cropCanvas = document.createElement("canvas");
-    cropCanvas.width = cropW;
-    cropCanvas.height = cropH;
-    const cropCtx = cropCanvas.getContext("2d");
-    if (!cropCtx) return;
-
-    cropCtx.drawImage(img, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
-
-    croppedImageUrl.value = cropCanvas.toDataURL("image/png");
-  } catch (err: any) {
-    console.error("Error rendering crop result:", err);
-    error.value = "Failed to render crop result: " + err.message;
   }
 };
 
@@ -197,34 +174,79 @@ const submitFile = async () => {
   loading.value = true;
   error.value = null;
   result.value = null;
-  croppedImageUrl.value = null;
+  cropResult.value = null;
 
   try {
-    console.log("Sending request to /api/v1/debug/crop...");
-    const data = await debugCrop({
-      body: {
-        file: selectedFile.value,
-      },
-    });
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      if (!e.target?.result) return;
 
-    console.log("Received data:", data);
-    result.value = data as DebugCropResponse;
+      console.log("Sending request to /api/v1/process/edges...");
+      const data = await detectEdges({
+        body: {
+          file: selectedFile.value,
+        },
+      });
+
+      console.log("Received data:", data);
+      result.value = data as DetectEdgesResponse;
+      loading.value = false;
+    };
+    reader.readAsDataURL(selectedFile.value);
   } catch (e: any) {
     console.error(e);
     error.value = e.message;
-  } finally {
+    loading.value = false;
+  }
+};
+
+const submitCrop = async () => {
+  if (!selectedFile.value) return;
+
+  loading.value = true;
+  error.value = null;
+  result.value = null;
+  cropResult.value = null;
+
+  try {
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      if (!e.target?.result) return;
+
+      const base64Data = e.target.result as string;
+      console.log("Sending crop request to /api/v1/process/crop...");
+
+      const data = await cropFloorplan({
+        body: {
+          image: base64Data,
+          options: {
+            blur_radius: 1.2,
+            canny_low: 50,
+            canny_high: 150,
+            resize_max_width: 800,
+          },
+        },
+      });
+
+      console.log("Crop result:", data);
+      cropResult.value = data.cropped_image
+        ? {
+            cropped_image: data.cropped_image,
+            message: data.message || "",
+          }
+        : null;
+      loading.value = false;
+    };
+    reader.readAsDataURL(selectedFile.value);
+  } catch (e: any) {
+    console.error(e);
+    error.value = e.message;
     loading.value = false;
   }
 };
 </script>
 
 <style scoped>
-.pdf-canvas {
-  max-width: 100%;
-  height: auto;
-  border: 5px solid #333;
-  display: block;
-}
 .test-crop-container {
   padding: 20px;
   background: #f4f4f4;
@@ -254,14 +276,7 @@ const submitFile = async () => {
 .image-box img {
   max-width: 100%;
   height: auto;
-  border: 5px solid #333; /* Thick dark border to see white images */
+  border: 5px solid #333;
   display: block;
-}
-.info {
-  margin-top: 10px;
-  font-family: monospace;
-  background: #333;
-  color: #fff;
-  padding: 10px;
 }
 </style>

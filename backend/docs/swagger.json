@@ -21,6 +21,59 @@
     "host": "localhost:8080",
     "basePath": "/",
     "paths": {
+        "/api/v1/process/crop": {
+            "post": {
+                "description": "Detect and crop the floorplan area from a paper document image",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "edge-detection"
+                ],
+                "summary": "Automatic crop floorplan from paper",
+                "operationId": "cropFloorplan",
+                "parameters": [
+                    {
+                        "description": "Image and edge detection options",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.CropFloorplanRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Cropped floorplan",
+                        "schema": {
+                            "$ref": "#/definitions/handler.CropFloorplanResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/process/edges": {
             "post": {
                 "description": "Process a floorplan image to detect edges using Canny edge detection",
@@ -209,6 +262,53 @@
         }
     },
     "definitions": {
+        "handler.CropFloorplanRequest": {
+            "type": "object",
+            "required": [
+                "image"
+            ],
+            "properties": {
+                "image": {
+                    "description": "base64 or data:image/...",
+                    "type": "string"
+                },
+                "options": {
+                    "$ref": "#/definitions/handler.EdgeDetectionRequest"
+                }
+            }
+        },
+        "handler.CropFloorplanResponse": {
+            "type": "object",
+            "properties": {
+                "cropped_image": {
+                    "type": "string"
+                },
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "handler.EdgeDetectionRequest": {
+            "type": "object",
+            "properties": {
+                "blur_radius": {
+                    "type": "number",
+                    "default": 1.2
+                },
+                "canny_high": {
+                    "type": "number",
+                    "default": 150
+                },
+                "canny_low": {
+                    "type": "number",
+                    "default": 50
+                },
+                "resize_max_width": {
+                    "type": "integer",
+                    "default": 800
+                }
+            }
+        },
         "handler.EdgeDetectionResponse": {
             "type": "object",
             "properties": {
