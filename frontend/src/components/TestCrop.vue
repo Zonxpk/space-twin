@@ -9,6 +9,16 @@
         @change="handleFileSelect"
         accept="image/*,application/pdf"
       />
+      
+      <div class="mock-controls">
+        <select v-model="selectedMockFile">
+          <option v-for="file in MOCK_FILES" :key="file.url" :value="file.url">
+            {{ file.label }}
+          </option>
+        </select>
+        <button @click="loadMockFile">Load Mock</button>
+      </div>
+
       <button @click="submitFile" :disabled="!selectedFile">
         Detect Edges
       </button>
@@ -98,6 +108,14 @@ import type { DetectEdgesResponse } from "../client/types.gen";
 // Set worker source for pdfjs-dist
 pdfjsLib.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
 
+const MOCK_FILES = [
+  { label: 'Sample Floorplan', url: '/mock-floorplan.pdf' },
+  { label: '2 Bed 1.5 Bath', url: '/mock-2bed-1.5bath.pdf' },
+  { label: 'Sample Updated', url: '/mock-sample-updated.pdf' },
+  { label: 'Site Floorplan', url: '/mock-site-floorplan.pdf' },
+];
+
+const selectedMockFile = ref(MOCK_FILES[0].url);
 const selectedFile = ref<File | null>(null);
 const result = ref<DetectEdgesResponse | null>(null);
 const cropResult = ref<{ cropped_image: string; message: string } | null>(null);
@@ -117,18 +135,7 @@ const getPreviewUrl = (): string => {
   return URL.createObjectURL(selectedFile.value);
 };
 
-const handleFileSelect = async (event: Event) => {
-  const target = event.target as HTMLInputElement;
-  const file = target.files?.[0];
-  error.value = null;
-  result.value = null;
-  cropResult.value = null;
-
-  if (!file) {
-    selectedFile.value = null;
-    return;
-  }
-
+const processFile = async (file: File) => {
   try {
     if (file.type === "application/pdf") {
       const arrayBuffer = await file.arrayBuffer();
@@ -165,6 +172,42 @@ const handleFileSelect = async (event: Event) => {
   } catch (err: any) {
     console.error("Error previewing file:", err);
     error.value = "Failed to create preview: " + err.message;
+  }
+};
+
+const handleFileSelect = async (event: Event) => {
+  const target = event.target as HTMLInputElement;
+  const file = target.files?.[0];
+  error.value = null;
+  result.value = null;
+  cropResult.value = null;
+
+  if (!file) {
+    selectedFile.value = null;
+    return;
+  }
+
+  await processFile(file);
+};
+
+const loadMockFile = async () => {
+  loading.value = true;
+  error.value = null;
+  result.value = null;
+  cropResult.value = null;
+
+  try {
+    const response = await fetch(selectedMockFile.value);
+    if (!response.ok) throw new Error('Failed to fetch mock file');
+    const blob = await response.blob();
+    const filename = selectedMockFile.value.split('/').pop() || "mock-file.pdf";
+    const file = new File([blob], filename, { type: "application/pdf" });
+    await processFile(file);
+  } catch (e: any) {
+    console.error(e);
+    error.value = "Failed to load mock file: " + e.message;
+  } finally {
+    loading.value = false;
   }
 };
 
@@ -258,6 +301,13 @@ const submitCrop = async () => {
   display: flex;
   gap: 10px;
   align-items: center;
+}
+.mock-controls {
+  display: flex;
+  gap: 5px;
+  padding: 5px;
+  background: #eee;
+  border-radius: 4px;
 }
 .comparison {
   display: flex;
