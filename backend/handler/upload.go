@@ -20,7 +20,18 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// UploadFloorplan handles the file upload and calls the AI service
+// UploadFloorplan godoc
+// @Summary Upload a floorplan image
+// @Description Upload a floorplan image (PNG, JPG, JPEG) and return the detected rooms
+// @ID uploadFloorplan
+// @Tags upload
+// @Accept multipart/form-data
+// @Produce json
+// @Param file formData file true "Floorplan image file"
+// @Success 200 {object} map[string]interface{} "Detection results with rooms"
+// @Failure 400 {object} map[string]string "Bad request"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /api/v1/upload [post]
 func UploadFloorplan(c *gin.Context) {
 	// 1. Get file from request
 	file, header, err := c.Request.FormFile("file")

@@ -1,0 +1,154 @@
+basePath: /
+definitions:
+  handler.EdgeDetectionResponse:
+    properties:
+      message:
+        type: string
+      processed_image:
+        description: data:image/png;base64,...
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: support@swagger.io
+    name: API Support
+    url: http://www.swagger.io/support
+  description: Backend API for floorplan processing and detection
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  termsOfService: http://swagger.io/terms/
+  title: FloorPlan Whiteboard API
+  version: "1.0"
+paths:
+  /api/v1/process/edges:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Process a floorplan image to detect edges using Canny edge detection
+      operationId: detectEdges
+      parameters:
+      - description: Floorplan image file
+        in: formData
+        name: file
+        required: true
+        type: file
+      - default: 1.2
+        description: Blur radius for preprocessing
+        in: formData
+        name: blur_radius
+        type: number
+      - default: 50
+        description: Canny low threshold
+        in: formData
+        name: canny_low
+        type: number
+      - default: 150
+        description: Canny high threshold
+        in: formData
+        name: canny_high
+        type: number
+      - default: 800
+        description: Maximum width for resizing
+        in: formData
+        name: resize_max_width
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Edge detection result
+          schema:
+            $ref: '#/definitions/handler.EdgeDetectionResponse'
+        "400":
+          description: Bad request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Detect edges in a floorplan image
+      tags:
+      - edge-detection
+  /api/v1/process/edges-json:
+    post:
+      consumes:
+      - application/json
+      description: Process a floorplan image (provided as base64) to detect edges
+      operationId: detectEdgesJSON
+      parameters:
+      - description: JSON request with image and options
+        in: body
+        name: request
+        required: true
+        schema:
+          additionalProperties: true
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Edge detection result with processed image
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Detect edges using JSON request with base64 image
+      tags:
+      - edge-detection
+  /api/v1/upload:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Upload a floorplan image (PNG, JPG, JPEG) and return the detected
+        rooms
+      operationId: uploadFloorplan
+      parameters:
+      - description: Floorplan image file
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Detection results with rooms
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Upload a floorplan image
+      tags:
+      - upload
+schemes:
+- http
+swagger: "2.0"

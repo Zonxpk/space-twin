@@ -2,7 +2,7 @@
 
 import { type Client, formDataBodySerializer, type Options as Options2, type TDataShape } from './client';
 import { client } from './client.gen';
-import type { DebugCropData, DebugCropErrors, DebugCropResponses, GetWsData, UploadFloorplanData, UploadFloorplanErrors, UploadFloorplanResponses } from './types.gen';
+import type { DetectEdgesData, DetectEdgesErrors, DetectEdgesJsonData, DetectEdgesJsonErrors, DetectEdgesJsonResponses, DetectEdgesResponses, UploadFloorplanData, UploadFloorplanErrors, UploadFloorplanResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
     /**
@@ -19,34 +19,45 @@ export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends 
 };
 
 /**
- * Upload a floorplan PDF/Image for processing
+ * Detect edges in a floorplan image
+ *
+ * Process a floorplan image to detect edges using Canny edge detection
  */
-export const uploadFloorplan = <ThrowOnError extends boolean = false>(options?: Options<UploadFloorplanData, ThrowOnError>) => (options?.client ?? client).post<UploadFloorplanResponses, UploadFloorplanErrors, ThrowOnError>({
+export const detectEdges = <ThrowOnError extends boolean = false>(options: Options<DetectEdgesData, ThrowOnError>) => (options.client ?? client).post<DetectEdgesResponses, DetectEdgesErrors, ThrowOnError>({
     ...formDataBodySerializer,
-    url: '/upload',
+    url: '/api/v1/process/edges',
     ...options,
     headers: {
         'Content-Type': null,
-        ...options?.headers
+        ...options.headers
     }
 });
 
 /**
- * WebSocket connection for real-time updates
+ * Detect edges using JSON request with base64 image
  *
- * Connects to the real-time hub. Supports `subscribe` messages.
+ * Process a floorplan image (provided as base64) to detect edges
  */
-export const getWs = <ThrowOnError extends boolean = false>(options?: Options<GetWsData, ThrowOnError>) => (options?.client ?? client).get<unknown, unknown, ThrowOnError>({ url: '/ws', ...options });
+export const detectEdgesJson = <ThrowOnError extends boolean = false>(options: Options<DetectEdgesJsonData, ThrowOnError>) => (options.client ?? client).post<DetectEdgesJsonResponses, DetectEdgesJsonErrors, ThrowOnError>({
+    url: '/api/v1/process/edges-json',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
 
 /**
- * Debug endpoint for testing image cropping
+ * Upload a floorplan image
+ *
+ * Upload a floorplan image (PNG, JPG, JPEG) and return the detected rooms
  */
-export const debugCrop = <ThrowOnError extends boolean = false>(options?: Options<DebugCropData, ThrowOnError>) => (options?.client ?? client).post<DebugCropResponses, DebugCropErrors, ThrowOnError>({
+export const uploadFloorplan = <ThrowOnError extends boolean = false>(options: Options<UploadFloorplanData, ThrowOnError>) => (options.client ?? client).post<UploadFloorplanResponses, UploadFloorplanErrors, ThrowOnError>({
     ...formDataBodySerializer,
-    url: '/debug/crop',
+    url: '/api/v1/upload',
     ...options,
     headers: {
         'Content-Type': null,
-        ...options?.headers
+        ...options.headers
     }
 });

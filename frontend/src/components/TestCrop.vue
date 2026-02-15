@@ -9,7 +9,9 @@
         @change="handleFileSelect"
         accept="image/*,application/pdf"
       />
-      <button @click="submitFile" :disabled="!selectedFile">Test Crop</button>
+      <button @click="submitFile" :disabled="!selectedFile">
+        Test Crop (Server)
+      </button>
       <button @click="$emit('close')">Close Debug</button>
     </div>
 
