@@ -21,6 +21,7 @@ import (
 	"io/fs"
 	"log"
 	"net/http"
+	"os"
 
 	_ "floorplan-whiteboard/docs" // Load generated swagger docs
 	"floorplan-whiteboard/handler"
@@ -84,8 +85,13 @@ func main() {
 		hub.HandleWebSocket(c)
 	})
 
-	log.Println("Server starting on :8080")
-	if err := r.Run(":8080"); err != nil {
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+
+	log.Printf("Server starting on :%s", port)
+	if err := r.Run(":" + port); err != nil {
 		log.Fatal(err)
 	}
 }

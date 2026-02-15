@@ -3,15 +3,28 @@ package ai
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"cloud.google.com/go/vertexai/genai"
 )
 
-const (
+var (
 	ProjectID = "floorplan-digital-twin"
-	Location  = "us-central1"
+	Location  = "asia-southeast3"
 	ModelName = "gemini-2.5-flash"
 )
+
+func init() {
+	if p := os.Getenv("GCP_PROJECT_ID"); p != "" {
+		ProjectID = p
+	}
+	if l := os.Getenv("GCP_LOCATION"); l != "" {
+		Location = l
+	}
+	if m := os.Getenv("GCP_MODEL_NAME"); m != "" {
+		ModelName = m
+	}
+}
 
 // AnalyzeFloorplan sends image/PDF data to Vertex AI and returns the JSON analysis
 func AnalyzeFloorplan(ctx context.Context, data []byte, mimeType string) (string, error) {
