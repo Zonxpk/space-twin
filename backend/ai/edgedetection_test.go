@@ -112,3 +112,71 @@ func TestDefaultEdgeDetectionOptions(t *testing.T) {
 		t.Errorf("Expected ResizeMaxWidth 800, got %d", opts.ResizeMaxWidth)
 	}
 }
+
+func TestDilate(t *testing.T) {
+	img := image.NewGray(image.Rect(0, 0, 11, 11))
+	// Set center pixel to white
+	img.SetGray(5, 5, color.Gray{Y: 255})
+
+	// Dilate with radius 2
+	radius := 2
+	dilated := Dilate(img, radius)
+	grayDilated, ok := dilated.(*image.Gray)
+	if !ok {
+		t.Fatal("Dilate should return *image.Gray")
+	}
+
+	// Check bounds of dilation
+	// Should be square from (5-2, 5-2) to (5+2, 5+2) = (3,3) to (7,7) inclusive
+	for y := 0; y < 11; y++ {
+		for x := 0; x < 11; x++ {
+			expected := uint8(0)
+			if x >= 3 && x <= 7 && y >= 3 && y <= 7 {
+				expected = 255
+			}
+
+			got := grayDilated.GrayAt(x, y).Y
+			if got != expected {
+				t.Errorf("At (%d,%d): expected %d, got %d", x, y, expected, got)
+			}
+		}
+	}
+}
+
+func TestGetMainContentBoundingBox(t *testing.T) {
+	img := image.NewGray(image.Rect(0, 0, 100, 100))
+
+	// Create two 10x10 squares separated by 5px gap
+	// Square 1: (20,20) - (30,30)
+	// Square 2: (35,20) - (45,30)
+	// Gap is from x=30 to x=35 (5px)
+
+	for y := 20; y < 30; y++ {
+		for x := 20; x < 30; x++ {
+			img.SetGray(x, y, color.Gray{Y: 255})
+		}
+		for x := 35; x < 45; x++ {
+			img.SetGray(x, y, color.Gray{Y: 255})
+		}
+	}
+
+	// Dilation radius 10 should merge these
+	rect := GetMainContentBoundingBox(img)
+
+	// Expect bounding box to cover both squares roughly
+	// Original bounds: (20,20) to (45,30)
+	// The function returns rect that is dilated then shrunk back.
+	// Since the gap is filled, it should be one component.
+
+	if rect.Empty() {
+		t.Error("Returned empty rectangle")
+	}
+
+	// Check if it includes both squares
+	if rect.Min.X > 20 || rect.Min.Y > 20 {
+		t.Errorf("Rect min too large: %v (expected <= (20,20))", rect.Min)
+	}
+	if rect.Max.X < 45 || rect.Max.Y < 30 {
+		t.Errorf("Rect max too small: %v (expected >= (45,30))", rect.Max)
+	}
+}

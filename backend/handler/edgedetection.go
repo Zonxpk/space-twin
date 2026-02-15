@@ -301,7 +301,9 @@ func CropFloorplanHandler(c *gin.Context) {
 
 	// ========== AI PROCESSING STEP 2: CROP CONTENT ==========
 	// Find the bounding box of the content in the edge image
-	cropRect := ai.GetLargestComponentBoundingBox(edgeImg)
+	// Use GetMainContentBoundingBox which uses dilation to group nearby objects (walls)
+	// This helps detect the full floorplan area rather than just a single wall
+	cropRect := ai.GetMainContentBoundingBox(edgeImg)
 
 	// Scale cropRect to original image size
 	// edgeImg might be resized if ResizeMaxWidth was set
