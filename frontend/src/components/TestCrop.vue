@@ -180,6 +180,7 @@ const handleFileSelect = async (event: Event) => {
   error.value = null;
   result.value = null;
   cropResult.value = null;
+  selectedMockFile.value = "";
 
   if (!file) {
     selectedFile.value = null;
