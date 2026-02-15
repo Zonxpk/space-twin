@@ -25,13 +25,20 @@ func AnalyzeFloorplan(ctx context.Context, data []byte, mimeType string) (string
 	model.ResponseMIMEType = "application/json"
 
 	// Prompt to force JSON structure for rooms and content_box
-	prompt := genai.Text("Analyze this floor plan. " +
-		"1. Identify the 'content_box': the bounding box that contains the actual building layout, strictly EXCLUDING the page margins, title blocks, legends, and empty whitespace. " +
-		"2. Identify all 'rooms': typical room detection. " +
-		"Return a JSON object with: " +
-		"'content_box': [ymin, xmin, ymax, xmax] (relative 0-1000), " +
-		"'rooms': list of objects with 'name', 'type', and 'rect' [ymin, xmin, ymax, xmax] (relative 0-1000). " +
-		"Ensure the output is valid JSON.")
+	prompt := genai.Text(`Analyze this architectural floor plan image.
+				Identify all functional 'rooms' and spaces (Offices, Meeting Rooms, Hallways, etc.).
+				For each room, provide:
+				- 'name': The text label found in the room (e.g., "Office 101", "Conf Room A"). If no label, use a descriptive name.
+				- 'type': Categorize as "OFFICE", "MEETING", "HALLWAY", or "UNKNOWN".
+				- 'rect': The bounding box of the room's interior space.
+
+				Return a strictly valid JSON object (no markdown formatting) with this schema:
+				{
+					"rooms": [
+						{ "name": "string", "type": "string", "rect": [ymin, xmin, ymax, xmax] }
+					]
+				}
+				All coordinates MUST be integers on a relative scale of 0 to 1000, where [0,0] is top-left and [1000,1000] is bottom-right of the original image.`)
 
 	// Create data part based on mimeType
 	var part genai.Part
@@ -55,4 +62,9 @@ func AnalyzeFloorplan(ctx context.Context, data []byte, mimeType string) (string
 	}
 
 	return "", fmt.Errorf("unexpected response format")
+}
+
+// getClient creates a new Vertex AI client (shared helper)
+func getClient(ctx context.Context) (*genai.Client, error) {
+	return genai.NewClient(ctx, ProjectID, Location)
 }

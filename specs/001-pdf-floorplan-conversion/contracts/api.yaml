@@ -1,0 +1,126 @@
+openapi: 3.0.0
+info:
+  title: Floorplan PDF Conversion API
+  version: 1.0.0
+  description: API for converting PDFs to interactive digital twins and real-time updates.
+servers:
+  - url: http://localhost:8080/api/v1
+paths:
+  /upload:
+    post:
+      summary: Upload a floorplan PDF/Image for processing
+      operationId: uploadFloorplan
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: The PDF or Image file to process
+              required:
+                - file
+      responses:
+        "200":
+          description: Successful processing
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FloorplanResponse"
+        "400":
+          description: Invalid input
+        "500":
+          description: Processing error
+
+  /ws:
+    get:
+      summary: WebSocket connection for real-time updates
+      description: Connects to the real-time hub. Supports `subscribe` messages.
+      responses:
+        "101":
+          description: Switching Protocols
+
+  /debug/crop:
+    post:
+      summary: Debug endpoint for testing image cropping
+      operationId: debugCrop
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: The image or PDF file to crop
+              required:
+                - file
+      responses:
+        "200":
+          description: Successful crop analysis
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  file:
+                    type: string
+                    description: Base64 encoded file data
+                  content_box:
+                    type: array
+                    items:
+                      type: integer
+                    minItems: 4
+                    maxItems: 4
+                    description: "[ymin, xmin, ymax, xmax] bounding box"
+                  file_type:
+                    type: string
+                    description: File extension (e.g., .png, .pdf)
+        "400":
+          description: Invalid input
+        "500":
+          description: Processing error
+
+components:
+  schemas:
+    FloorplanResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        image:
+          type: string
+          description: Base64 encoded image data (data:image/png;base64,...)
+        width:
+          type: integer
+        height:
+          type: integer
+        rooms:
+          type: array
+          items:
+            $ref: "#/components/schemas/Room"
+
+    Room:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        type:
+          type: string
+          enum: [OFFICE, MEETING, UNKNOWN]
+        rect:
+          type: array
+          items:
+            type: integer
+          minItems: 4
+          maxItems: 4
+          description: "[x, y, width, height] in pixels relative to the cropped image"
+        status:
+          type: string
+          enum: [AVAILABLE, BUSY, OFFLINE]

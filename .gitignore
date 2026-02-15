@@ -1,0 +1,30 @@
+# Go
+bin/
+dist/
+vendor/
+*.exe
+*.test
+*.out
+.env
+.env.*
+
+# Node.js
+node_modules/
+npm-debug.log
+yarn-error.log
+.npm/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+frontend/dist/
+backend/tmp/
+backend/bin/

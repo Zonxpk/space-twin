@@ -1,90 +1,148 @@
-<template>
-  <div 
-    class="upload-container"
-    :class="{ 'is-dragover': isDragOver }"
-    @dragover.prevent="isDragOver = true"
-    @dragleave.prevent="isDragOver = false"
-    @drop.prevent="handleDrop"
-    @click="triggerFileInput"
-  >
-    <div v-if="uploading" class="upload-content">
-      <div class="spinner"></div>
-      <p>Analyzing Floorplan...</p>
-    </div>
-    <div v-else class="upload-content">
-      <p class="icon">📂</p>
-      <h3>Click or Drag & Drop to Upload</h3>
-      <p class="subtext">Supports Images (PNG, JPG) and PDF</p>
-      <input 
-        type="file" 
-        ref="fileInput"
-        @change="handleFileSelect" 
-        accept="image/*,application/pdf" 
-        style="display: none"
-      />
-    </div>
-    <div v-if="error" class="error" @click.stop>{{ error }}</div>
-  </div>
-</template>
-
 <script setup>
-import { ref } from 'vue';
+import { ref } from "vue";
+import * as pdfjsLib from "pdfjs-dist";
+import { useMutation } from "@tanstack/vue-query";
+import { uploadFloorplanMutation } from "../client/@tanstack/vue-query.gen";
 
-const emit = defineEmits(['analysis-complete']);
+// We will set the worker path dynamically before rendering.
+// This is a more robust way to handle it with bundlers like Vite.
 
-const fileInput = ref(null);
-const isDragOver = ref(false);
+const emit = defineEmits(["analysis-complete"]);
+
 const uploading = ref(false);
 const error = ref(null);
+const isDragOver = ref(false);
 
-const triggerFileInput = () => {
-    if (!uploading.value) {
-        fileInput.value.click();
-    }
+const handleDragOver = (e) => {
+  e.preventDefault();
+  isDragOver.value = true;
 };
 
-const handleFileSelect = (event) => {
-    const file = event.target.files[0];
-    if (file) {
-        processFile(file);
-    }
+const handleDragLeave = () => {
+  isDragOver.value = false;
 };
 
 const handleDrop = (event) => {
-    isDragOver.value = false;
-    const file = event.dataTransfer.files[0];
-    if (file) {
-        processFile(file);
-    }
+  isDragOver.value = false;
+  const file = event.dataTransfer.files[0];
+  if (file) {
+    processFile(file);
+  }
 };
+
+const handleFileSelect = (event) => {
+  const file = event.target.files[0];
+  if (file) {
+    processFile(file);
+  }
+};
+
+const { mutateAsync: uploadFloorplan } = useMutation({
+  ...uploadFloorplanMutation(),
+});
 
 const processFile = async (file) => {
   uploading.value = true;
   error.value = null;
 
-  const formData = new FormData();
-  formData.append('file', file);
-
   try {
-    const response = await fetch('http://localhost:8080/upload', {
-      method: 'POST',
-      body: formData,
-    });
+    let fileToUpload = file;
 
-    if (!response.ok) {
-      throw new Error(`Upload failed: ${response.statusText}`);
+    // If PDF, render to Image first
+    if (file.type === "application/pdf") {
+      fileToUpload = await convertPdfToImage(file);
     }
 
-    const data = await response.json();
-    emit('analysis-complete', { rooms: data.rooms, image: data.image });
+    const data = await uploadFloorplan({
+      body: {
+        file: fileToUpload,
+      },
+    });
+
+    emit("analysis-complete", { rooms: data.rooms, image: data.image });
   } catch (err) {
     console.error(err);
-    error.value = err.message || 'Failed to analyze floorplan';
+    error.value = err.message || "Failed to analyze floorplan";
   } finally {
     uploading.value = false;
   }
 };
+
+const convertPdfToImage = async (file) => {
+  // Dynamically set the worker source path. This is a robust method for Vite.
+  pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+    "pdfjs-dist/build/pdf.worker.min.js",
+    import.meta.url,
+  ).toString();
+
+  const arrayBuffer = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  const page = await pdf.getPage(1);
+
+  const scale = 2.0; // Use a higher scale for better analysis quality
+  const viewport = page.getViewport({ scale });
+
+  const canvas = document.createElement("canvas");
+  const context = canvas.getContext("2d");
+  canvas.height = viewport.height;
+  canvas.width = viewport.width;
+
+  const renderContext = {
+    canvasContext: context,
+    viewport: viewport,
+    background: "rgba(255, 255, 255, 1)", // Ensure a white background
+  };
+
+  await page.render(renderContext).promise;
+
+  return new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (blob) {
+        const newFile = new File([blob], file.name.replace(".pdf", ".png"), {
+          type: "image/png",
+        });
+        resolve(newFile);
+      } else {
+        reject(new Error("Canvas to Blob conversion failed"));
+      }
+    }, "image/png");
+  });
+};
 </script>
+
+<template>
+  <div
+    class="upload-container"
+    :class="{ 'is-dragover': isDragOver }"
+    @dragover="handleDragOver"
+    @dragleave="handleDragLeave"
+    @drop.prevent="handleDrop"
+    @click="$refs.fileInput.click()"
+  >
+    <div v-if="uploading" class="upload-content">
+      <div class="spinner"></div>
+      <p>Analyzing floorplan...</p>
+      <small>Converting PDF & Detect Rooms</small>
+    </div>
+
+    <div v-else class="upload-content">
+      <div class="icon"></div>
+      <h3>Drop PDF floorplan here</h3>
+      <p class="subtext">or click to browse</p>
+      <input
+        type="file"
+        ref="fileInput"
+        @change="handleFileSelect"
+        accept=".pdf,.png,.jpg,.jpeg"
+        style="display: none"
+      />
+    </div>
+
+    <div v-if="error" class="error">
+      {{ error }}
+    </div>
+  </div>
+</template>
 
 <style scoped>
 .upload-container {
@@ -119,14 +177,14 @@ const processFile = async (file) => {
 }
 
 .icon {
-    font-size: 3rem;
-    margin-bottom: 10px;
+  font-size: 3rem;
+  margin-bottom: 10px;
 }
 
 .subtext {
-    color: #777;
-    font-size: 0.9rem;
-    margin-top: 5px;
+  color: #777;
+  font-size: 0.9rem;
+  margin-top: 5px;
 }
 
 .error {
@@ -148,7 +206,11 @@ const processFile = async (file) => {
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 </style>
