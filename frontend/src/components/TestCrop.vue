@@ -9,7 +9,7 @@
         @change="handleFileSelect"
         accept="image/*,application/pdf"
       />
-      
+
       <div class="mock-controls">
         <select v-model="selectedMockFile">
           <option v-for="file in MOCK_FILES" :key="file.url" :value="file.url">
@@ -109,10 +109,10 @@ import type { DetectEdgesResponse } from "../client/types.gen";
 pdfjsLib.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
 
 const MOCK_FILES = [
-  { label: 'Sample Floorplan', url: '/mock-floorplan.pdf' },
-  { label: '2 Bed 1.5 Bath', url: '/mock-2bed-1.5bath.pdf' },
-  { label: 'Sample Updated', url: '/mock-sample-updated.pdf' },
-  { label: 'Site Floorplan', url: '/mock-site-floorplan.pdf' },
+  { label: "Sample Floorplan", url: "/mock-floorplan.pdf" },
+  { label: "2 Bed 1.5 Bath", url: "/mock-2bed-1.5bath.pdf" },
+  { label: "Sample Updated", url: "/mock-sample-updated.pdf" },
+  { label: "Site Floorplan", url: "/mock-site-floorplan.pdf" },
 ];
 
 const selectedMockFile = ref(MOCK_FILES[0].url);
@@ -198,9 +198,9 @@ const loadMockFile = async () => {
 
   try {
     const response = await fetch(selectedMockFile.value);
-    if (!response.ok) throw new Error('Failed to fetch mock file');
+    if (!response.ok) throw new Error("Failed to fetch mock file");
     const blob = await response.blob();
-    const filename = selectedMockFile.value.split('/').pop() || "mock-file.pdf";
+    const filename = selectedMockFile.value.split("/").pop() || "mock-file.pdf";
     const file = new File([blob], filename, { type: "application/pdf" });
     await processFile(file);
   } catch (e: any) {
