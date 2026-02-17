@@ -101,6 +101,8 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import * as pdfjsLib from "pdfjs-dist";
+// @ts-ignore
+import pdfjsWorkerUrl from "pdfjs-dist/build/pdf.worker.mjs?url";
 import { useMutation } from "@tanstack/vue-query";
 import {
   detectEdgesMutation,
@@ -109,7 +111,7 @@ import {
 import type { DetectEdgesResponse } from "../client/types.gen";
 
 // Set worker source for pdfjs-dist
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorkerUrl;
 
 const MOCK_FILES = [
   { label: "Sample Floorplan", url: "/mock-floorplan.pdf" },
