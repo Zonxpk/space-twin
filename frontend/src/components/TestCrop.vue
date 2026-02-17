@@ -4,11 +4,15 @@
     <p>Upload an image to test edge detection and automatic cropping.</p>
 
     <div class="controls">
-      <input
-        type="file"
-        @change="handleFileSelect"
-        accept="image/*,application/pdf"
-      />
+      <label class="file-upload-btn">
+        [ SELECT_FILE ]
+        <input
+          type="file"
+          @change="handleFileSelect"
+          accept="image/*,application/pdf"
+          class="hidden-input"
+        />
+      </label>
 
       <div class="mock-controls">
         <select v-model="selectedMockFile" @change="loadMockFile">
@@ -291,42 +295,133 @@ const submitCrop = async () => {
 
 <style scoped>
 .test-crop-container {
-  padding: 20px;
-  background: #f4f4f4;
-  border: 1px solid #ccc;
-  margin: 20px 0;
+  padding: 2rem;
+  background: transparent;
+  color: var(--color-text);
+  font-family: var(--font-mono);
+  max-width: 1200px;
+  margin: 0 auto;
 }
+
+h2 {
+  font-size: 2rem;
+  margin-bottom: 1rem;
+  color: var(--color-accent);
+  text-transform: uppercase;
+}
+
+p {
+  color: #94a3b8;
+  margin-bottom: 2rem;
+}
+
 .controls {
-  margin: 15px 0;
+  margin: 1.5rem 0;
   display: flex;
-  gap: 10px;
+  flex-wrap: wrap;
+  gap: 1rem;
   align-items: center;
+  padding: 1rem;
+  border: 1px dashed var(--color-secondary);
+  background: rgba(15, 23, 42, 0.5);
 }
+
 .mock-controls {
   display: flex;
-  gap: 5px;
-  padding: 5px;
-  background: #eee;
-  border-radius: 4px;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  background: var(--color-secondary);
+  border: 1px solid var(--color-cta);
 }
+
+.file-upload-btn {
+  background: transparent;
+  color: var(--color-cta);
+  border: 1px solid var(--color-cta);
+  padding: 0.5rem 1rem;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: inline-block;
+}
+
+.file-upload-btn:hover {
+  background: var(--color-cta);
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.5);
+}
+
+.hidden-input {
+  display: none;
+}
+
+button {
+  background: transparent;
+  color: var(--color-cta);
+  border: 1px solid var(--color-cta);
+  padding: 0.5rem 1rem;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+button:hover:not(:disabled) {
+  background: var(--color-cta);
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.5);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  border-color: #64748b;
+  color: #64748b;
+}
+
+select {
+  background: var(--color-primary);
+  color: var(--color-text);
+  border: 1px solid var(--color-secondary);
+  padding: 0.5rem;
+  font-family: var(--font-mono);
+}
+
 .comparison {
   display: flex;
   flex-direction: row;
-  gap: 20px;
-  margin-top: 20px;
+  gap: 2rem;
+  margin-top: 2rem;
 }
+
 .image-box {
   flex: 1;
   min-width: 0;
   box-sizing: border-box;
-  border: 1px solid #ddd;
-  padding: 10px;
-  background: white;
+  border: 1px solid var(--color-secondary);
+  padding: 1rem;
+  background: rgba(15, 23, 42, 0.5);
 }
+
+.image-box h3 {
+  margin-top: 0;
+  color: var(--color-accent);
+  text-transform: uppercase;
+  font-size: 0.9rem;
+  border-bottom: 1px solid var(--color-secondary);
+  padding-bottom: 0.5rem;
+  margin-bottom: 1rem;
+}
+
 .image-box img {
   max-width: 100%;
   height: auto;
-  border: 5px solid #333;
+  border: 1px solid var(--color-cta);
   display: block;
 }
 </style>
