@@ -1,11 +1,14 @@
 <script setup>
 import { ref } from "vue";
 import * as pdfjsLib from "pdfjs-dist";
+import pdfjsWorkerUrl from "pdfjs-dist/build/pdf.worker.mjs?url";
 import { useMutation } from "@tanstack/vue-query";
 import {
   uploadFloorplanMutation,
   cropFloorplanMutation,
 } from "../client/@tanstack/vue-query.gen";
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorkerUrl;
 
 const emit = defineEmits(["analysis-complete"]);
 
@@ -108,11 +111,6 @@ const processUpload = async (file) => {
 };
 
 const convertPdfToImage = async (file) => {
-  pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
-    "pdfjs-dist/build/pdf.worker.min.js",
-    import.meta.url,
-  ).toString();
-
   const arrayBuffer = await file.arrayBuffer();
   const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
   const page = await pdf.getPage(1);
