@@ -3,7 +3,6 @@ package handler
 import (
 	"bytes"
 	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"image"
 	_ "image/jpeg" // Support JPEG decoding
@@ -71,16 +70,16 @@ func UploadFloorplan(c *gin.Context) {
 		return
 	}
 
-	// 3. Call AI Service
-	jsonResponse, err := ai.AnalyzeFloorplan(c.Request.Context(), fileBytes, mimeType)
+	// 3. Detect rooms with local CV pipeline (no Gemini)
+	rooms, err := ai.DetectRoomsFromFloorplan(fileBytes)
 	if err != nil {
-		fmt.Printf("AI Error: %v\n", err)
+		fmt.Printf("Room detection error: %v\n", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to analyze floorplan: " + err.Error()})
 		return
 	}
 
 	// 4. Process Image and Remap Coordinates
-	finalImageBase64, remappedRooms, err := processAndRemap(fileBytes, jsonResponse, mimeType)
+	finalImageBase64, remappedRooms, err := processAndRemap(fileBytes, rooms)
 	if err != nil {
 		// Send a specific error message back to the frontend
 		errorMsg := "Failed to process image after analysis: " + err.Error()
@@ -95,20 +94,15 @@ func UploadFloorplan(c *gin.Context) {
 	})
 }
 
-// GeminiResponse matches the JSON structure returned by Gemini
-type GeminiResponse struct {
-	ContentBox []int        `json:"content_box"` // [ymin, xmin, ymax, xmax] 0-1000
-	Rooms      []GeminiRoom `json:"rooms"`
-}
-
-func processAndRemap(fileBytes []byte, jsonStr string, mimeType string) (string, []models.Room, error) {
-	// A. Parse JSON
-	var aiData GeminiResponse
-	cleanJson := strings.ReplaceAll(jsonStr, "```json", "")
-	cleanJson = strings.ReplaceAll(cleanJson, "```", "")
-
-	if err := json.Unmarshal([]byte(cleanJson), &aiData); err != nil {
-		return "", nil, fmt.Errorf("json parse error: %w", err)
+func processAndRemap(fileBytes []byte, detectedRooms []ai.DetectedRoom) (string, []models.Room, error) {
+	// A. Map detector rooms to GeminiRoom shape used by remapping logic
+	geminiRooms := make([]GeminiRoom, 0, len(detectedRooms))
+	for _, room := range detectedRooms {
+		geminiRooms = append(geminiRooms, GeminiRoom{
+			Name: room.Name,
+			Type: room.Type,
+			Rect: room.Rect,
+		})
 	}
 
 	// B. Decode Image
@@ -119,7 +113,7 @@ func processAndRemap(fileBytes []byte, jsonStr string, mimeType string) (string,
 
 	// C. Calculate Crop and Remap
 	bounds := img.Bounds()
-	cropRect, remappedRooms, err := CalculateCropAndRemap(bounds.Dx(), bounds.Dy(), aiData.Rooms)
+	cropRect, remappedRooms, err := CalculateCropAndRemap(bounds.Dx(), bounds.Dy(), geminiRooms)
 	if err != nil {
 		return "", nil, fmt.Errorf("remap error: %w", err)
 	}
