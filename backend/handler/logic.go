@@ -2,7 +2,6 @@ package handler
 
 import (
 	"floorplan-whiteboard/models"
-	"fmt"
 	"image"
 )
 
@@ -14,20 +13,18 @@ type GeminiRoom struct {
 }
 
 // CalculateCropAndRemap computes the crop rectangle and remaps room coordinates.
-func CalculateCropAndRemap(imgW, imgH int, contentBox []int, geminiRooms []GeminiRoom) (image.Rectangle, []models.Room, error) {
-	if len(contentBox) != 4 {
-		return image.Rectangle{}, nil, fmt.Errorf("invalid content box")
-	}
-
+func CalculateCropAndRemap(imgW, imgH int, geminiRooms []GeminiRoom) (image.Rectangle, []models.Room, error) {
 	// Helper to scale 0-1000 to pixels
 	scaleY := func(v int) int { return int(float64(v) / 1000.0 * float64(imgH)) }
 	scaleX := func(v int) int { return int(float64(v) / 1000.0 * float64(imgW)) }
 
-	// ContentBox: [ymin, xmin, ymax, xmax]
-	cYMin := scaleY(contentBox[0])
-	cXMin := scaleX(contentBox[1])
-	cYMax := scaleY(contentBox[2])
-	cXMax := scaleX(contentBox[3])
+	var cYMin, cXMin, cYMax, cXMax int
+
+	// Default to full image
+	cYMin = 0
+	cXMin = 0
+	cYMax = imgH
+	cXMax = imgW
 
 	// Validate bounds
 	if cXMin < 0 {

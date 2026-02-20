@@ -111,10 +111,6 @@ func processAndRemap(fileBytes []byte, jsonStr string, mimeType string) (string,
 		return "", nil, fmt.Errorf("json parse error: %w", err)
 	}
 
-	if len(aiData.ContentBox) != 4 {
-		return "", nil, fmt.Errorf("no valid content_box found")
-	}
-
 	// B. Decode Image
 	img, _, err := image.Decode(bytes.NewReader(fileBytes))
 	if err != nil {
@@ -123,7 +119,7 @@ func processAndRemap(fileBytes []byte, jsonStr string, mimeType string) (string,
 
 	// C. Calculate Crop and Remap
 	bounds := img.Bounds()
-	cropRect, remappedRooms, err := CalculateCropAndRemap(bounds.Dx(), bounds.Dy(), aiData.ContentBox, aiData.Rooms)
+	cropRect, remappedRooms, err := CalculateCropAndRemap(bounds.Dx(), bounds.Dy(), aiData.Rooms)
 	if err != nil {
 		return "", nil, fmt.Errorf("remap error: %w", err)
 	}

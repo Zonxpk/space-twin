@@ -11,17 +11,15 @@ func TestCalculateCropAndRemap(t *testing.T) {
 	tests := []struct {
 		name         string
 		imgW, imgH   int
-		contentBox   []int // [ymin, xmin, ymax, xmax] 0-1000
 		geminiRooms  []GeminiRoom
 		wantCropRect image.Rectangle // Pixels
-		wantRooms    []models.Room   // [x, y, w, h] relative to crop
+		wantRooms    []models.Room   // [x, y, w, h] relative to full image
 		wantErr      bool
 	}{
 		{
-			name:       "Simple Case: Full size content box",
-			imgW:       1000,
-			imgH:       1000,
-			contentBox: []int{0, 0, 1000, 1000}, // Full image
+			name: "Simple Case: Full size image",
+			imgW: 1000,
+			imgH: 1000,
 			geminiRooms: []GeminiRoom{
 				{Name: "R1", Type: "OFFICE", Rect: []int{100, 100, 200, 200}}, // 100,100 -> 200,200
 			},
@@ -31,38 +29,37 @@ func TestCalculateCropAndRemap(t *testing.T) {
 			},
 		},
 		{
-			name:       "Simple Crop: Bottom Right Quadrant",
-			imgW:       1000,
-			imgH:       1000,
-			contentBox: []int{500, 500, 1000, 1000}, // ymin, xmin, ymax, xmax
+			name: "Bottom Right Quadrant Room",
+			imgW: 1000,
+			imgH: 1000,
 			geminiRooms: []GeminiRoom{
-				{Name: "R2", Type: "MEETING", Rect: []int{600, 600, 800, 800}}, // Inside crop
+				{Name: "R2", Type: "MEETING", Rect: []int{600, 600, 800, 800}},
 			},
-			wantCropRect: image.Rect(500, 500, 1000, 1000),
+			wantCropRect: image.Rect(0, 0, 1000, 1000),
 			wantRooms: []models.Room{
-				{Name: "R2", Type: models.RoomTypeMeeting, Rect: []int{100, 100, 200, 200}, Status: models.RoomStatusAvailable}, // relative: 600-500=100
+				{Name: "R2", Type: models.RoomTypeMeeting, Rect: []int{600, 600, 200, 200}, Status: models.RoomStatusAvailable},
 			},
 		},
 		{
-			name:       "Non-Square Aspect Ratio: 2000x1000",
-			imgW:       2000,
-			imgH:       1000,
-			contentBox: []int{0, 0, 1000, 500}, // Top Left Half (vertical split in image)
-			// Wait, xmax=500 means 50% width -> 1000px
-			// ymax=1000 means 100% height -> 1000px
+			name: "Non-Square Aspect Ratio: 2000x1000",
+			imgW: 2000,
+			imgH: 1000,
 			geminiRooms: []GeminiRoom{
-				{Name: "R3", Type: "HALLWAY", Rect: []int{100, 100, 200, 200}}, // 100 means 10% -> y=100, x=200
+				{Name: "R3", Type: "HALLWAY", Rect: []int{100, 100, 200, 200}}, // ymin=100, xmin=100 (10% of width 2000 -> 200)
 			},
-			wantCropRect: image.Rect(0, 0, 1000, 1000), // xmax=500/1000 * 2000 = 1000px
+			wantCropRect: image.Rect(0, 0, 2000, 1000),
 			wantRooms: []models.Room{
-				{Name: "R3", Type: models.RoomTypeHallway, Rect: []int{200, 100, 200, 100}, Status: models.RoomStatusAvailable}, // x=10%*2000=200, y=10%*1000=100. w=200, h=100
+				// ymin=100/1000*1000=100. xmin=100/1000*2000=200.
+				// ymax=200/1000*1000=200. xmax=200/1000*2000=400.
+				// w=400-200=200. h=200-100=100.
+				{Name: "R3", Type: models.RoomTypeHallway, Rect: []int{200, 100, 200, 100}, Status: models.RoomStatusAvailable},
 			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotCropRect, gotRooms, err := CalculateCropAndRemap(tt.imgW, tt.imgH, tt.contentBox, tt.geminiRooms)
+			gotCropRect, gotRooms, err := CalculateCropAndRemap(tt.imgW, tt.imgH, tt.geminiRooms)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("CalculateCropAndRemap() error = %v, wantErr %v", err, tt.wantErr)
 				return
