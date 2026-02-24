@@ -73,8 +73,6 @@ func CalculateCropAndRemap(imgW, imgH int, geminiRooms []GeminiRoom) (image.Rect
 			roomType = models.RoomTypeOffice
 		case "MEETING":
 			roomType = models.RoomTypeMeeting
-		case "HALLWAY":
-			roomType = models.RoomTypeHallway
 		}
 
 		remappedRooms = append(remappedRooms, models.Room{
