@@ -2,7 +2,8 @@
 
 # Configuration
 PROJECT_ID="floorplan-digital-twin"
-REGION="asia-southeast3"
+REGION="asia-northeast1"
+VERTEX_LOCATION="global"
 SERVICE_NAME="floorplan-backend"
 REPO_NAME="floorplan-repo"
 IMAGE_TAG="$REGION-docker.pkg.dev/$PROJECT_ID/$REPO_NAME/$SERVICE_NAME"
@@ -37,7 +38,7 @@ gcloud run deploy $SERVICE_NAME \
   --platform managed \
   --region $REGION \
   --allow-unauthenticated \
-  --set-env-vars GCP_PROJECT_ID=$PROJECT_ID,GCP_LOCATION=$REGION,GIN_MODE=release
+    --set-env-vars GCP_PROJECT_ID=$PROJECT_ID,GCP_LOCATION=$VERTEX_LOCATION,GIN_MODE=release
 
 if [ $? -ne 0 ]; then
     echo "Deployment failed."
