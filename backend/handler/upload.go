@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"image"
 	_ "image/jpeg" // Support JPEG decoding
@@ -97,17 +98,13 @@ func UploadFloorplan(c *gin.Context) {
 
 // GeminiResponse matches the JSON structure returned by Gemini
 type GeminiResponse struct {
-	ContentBox []int        `json:"content_box"` // [ymin, xmin, ymax, xmax] 0-1000
-	Rooms      []GeminiRoom `json:"rooms"`
+	Rooms []GeminiRoom `json:"rooms"`
 }
 
 func processAndRemap(fileBytes []byte, jsonStr string, mimeType string) (string, []models.Room, error) {
 	// A. Parse JSON
-	var aiData GeminiResponse
-	cleanJson := strings.ReplaceAll(jsonStr, "```json", "")
-	cleanJson = strings.ReplaceAll(cleanJson, "```", "")
-
-	if err := json.Unmarshal([]byte(cleanJson), &aiData); err != nil {
+	aiData, err := parseGeminiResponse(jsonStr)
+	if err != nil {
 		return "", nil, fmt.Errorf("json parse error: %w", err)
 	}
 
@@ -136,4 +133,174 @@ func processAndRemap(fileBytes []byte, jsonStr string, mimeType string) (string,
 	encodedString := base64.StdEncoding.EncodeToString(buf.Bytes())
 
 	return "data:image/png;base64," + encodedString, remappedRooms, nil
+}
+
+func parseGeminiResponse(jsonStr string) (GeminiResponse, error) {
+	clean := cleanAIJSON(jsonStr)
+
+	// Pass 1: clean JSON parses directly.
+	var aiData GeminiResponse
+	if err := json.Unmarshal([]byte(clean), &aiData); err == nil {
+		return aiData, nil
+	}
+
+	// Pass 2: strip leading/trailing noise then parse.
+	if objectJSON, err := extractFirstJSONObject(clean); err == nil {
+		if err2 := json.Unmarshal([]byte(objectJSON), &aiData); err2 == nil {
+			return aiData, nil
+		}
+	}
+
+	// Pass 3: repair truncated brackets/braces then re-try passes 1+2.
+	if repairedJSON, err := repairTruncatedJSONObject(clean); err == nil {
+		if err2 := json.Unmarshal([]byte(repairedJSON), &aiData); err2 == nil {
+			return aiData, nil
+		}
+		if objectJSON, err2 := extractFirstJSONObject(repairedJSON); err2 == nil {
+			if err3 := json.Unmarshal([]byte(objectJSON), &aiData); err3 == nil {
+				return aiData, nil
+			}
+		}
+	}
+
+	// Pass 4: last resort — scan rooms array and keep each fully-parsed object,
+	// discarding only the final truncated entry. Returns a partial result rather
+	// than a hard failure so the caller always gets whatever rooms were complete.
+	if rooms := extractPartialRooms(clean); len(rooms) > 0 {
+		fmt.Printf("[parser] recovered %d partial room(s) from truncated response\n", len(rooms))
+		return GeminiResponse{Rooms: rooms}, nil
+	}
+
+	return GeminiResponse{}, errors.New("unable to parse model JSON response")
+}
+
+// extractPartialRooms scans the raw string for the rooms array and decodes
+// each element individually with json.Decoder, stopping at the first error.
+// This recovers all complete room objects even when the response is truncated
+// mid-way through the last entry.
+func extractPartialRooms(value string) []GeminiRoom {
+	// Locate the start of the rooms array.
+	idx := strings.Index(value, `"rooms"`)
+	if idx == -1 {
+		return nil
+	}
+	arrayStart := strings.Index(value[idx:], "[")
+	if arrayStart == -1 {
+		return nil
+	}
+	arrayStart += idx
+
+	dec := json.NewDecoder(strings.NewReader(value[arrayStart:]))
+
+	// Consume the opening '['
+	if tok, err := dec.Token(); err != nil || tok != json.Delim('[') {
+		return nil
+	}
+
+	var rooms []GeminiRoom
+	for dec.More() {
+		var room GeminiRoom
+		if err := dec.Decode(&room); err != nil {
+			break // truncated object — stop, keep what we have
+		}
+		if len(room.Rect) == 4 && room.Name != "" {
+			rooms = append(rooms, room)
+		}
+	}
+	return rooms
+}
+
+func cleanAIJSON(jsonStr string) string {
+	clean := strings.TrimSpace(jsonStr)
+	clean = strings.ReplaceAll(clean, "```json", "")
+	clean = strings.ReplaceAll(clean, "```", "")
+	return strings.TrimSpace(clean)
+}
+
+func extractFirstJSONObject(value string) (string, error) {
+	start := strings.Index(value, "{")
+	if start == -1 {
+		return "", fmt.Errorf("no JSON object found in model response")
+	}
+
+	decoder := json.NewDecoder(strings.NewReader(value[start:]))
+	var raw json.RawMessage
+	if err := decoder.Decode(&raw); err != nil {
+		return "", fmt.Errorf("incomplete JSON object in model response")
+	}
+
+	if len(raw) == 0 || raw[0] != '{' {
+		return "", fmt.Errorf("first JSON value is not an object")
+	}
+
+	return strings.TrimSpace(string(raw)), nil
+}
+
+func repairTruncatedJSONObject(value string) (string, error) {
+	start := strings.Index(value, "{")
+	if start == -1 {
+		return "", fmt.Errorf("no JSON object found in model response")
+	}
+
+	candidate := strings.TrimSpace(value[start:])
+	if candidate == "" {
+		return "", fmt.Errorf("empty JSON candidate in model response")
+	}
+
+	// stack tracks closing tokens needed in reverse open order.
+	stack := make([]byte, 0, 16)
+	inString := false
+	escaped := false
+
+	for i := 0; i < len(candidate); i++ {
+		ch := candidate[i]
+
+		if inString {
+			if escaped {
+				escaped = false
+				continue
+			}
+			if ch == '\\' {
+				escaped = true
+				continue
+			}
+			if ch == '"' {
+				inString = false
+			}
+			continue
+		}
+
+		switch ch {
+		case '"':
+			inString = true
+		case '{':
+			stack = append(stack, '}')
+		case '}':
+			if len(stack) == 0 || stack[len(stack)-1] != '}' {
+				return "", fmt.Errorf("invalid JSON object nesting in model response")
+			}
+			stack = stack[:len(stack)-1]
+		case '[':
+			stack = append(stack, ']')
+		case ']':
+			if len(stack) == 0 || stack[len(stack)-1] != ']' {
+				return "", fmt.Errorf("invalid JSON array nesting in model response")
+			}
+			stack = stack[:len(stack)-1]
+		}
+	}
+
+	if inString {
+		// Close the truncated string before closing open structures.
+		candidate += `"`
+	}
+
+	candidate = strings.TrimRight(candidate, " \t\r\n,")
+
+	// Close in reverse stack order so brackets/braces interleave correctly.
+	for i := len(stack) - 1; i >= 0; i-- {
+		candidate += string(stack[i])
+	}
+
+	return candidate, nil
 }

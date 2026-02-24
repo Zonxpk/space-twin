@@ -45,14 +45,14 @@ func TestCalculateCropAndRemap(t *testing.T) {
 			imgW: 2000,
 			imgH: 1000,
 			geminiRooms: []GeminiRoom{
-				{Name: "R3", Type: "HALLWAY", Rect: []int{100, 100, 200, 200}}, // ymin=100, xmin=100 (10% of width 2000 -> 200)
+				{Name: "R3", Type: "HALLWAY", Rect: []int{100, 100, 200, 200}}, // hallways normalize to UNKNOWN
 			},
 			wantCropRect: image.Rect(0, 0, 2000, 1000),
 			wantRooms: []models.Room{
 				// ymin=100/1000*1000=100. xmin=100/1000*2000=200.
 				// ymax=200/1000*1000=200. xmax=200/1000*2000=400.
 				// w=400-200=200. h=200-100=100.
-				{Name: "R3", Type: models.RoomTypeHallway, Rect: []int{200, 100, 200, 100}, Status: models.RoomStatusAvailable},
+				{Name: "R3", Type: models.RoomTypeUnknown, Rect: []int{200, 100, 200, 100}, Status: models.RoomStatusAvailable},
 			},
 		},
 	}
