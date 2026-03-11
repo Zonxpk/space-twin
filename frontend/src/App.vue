@@ -1,8 +1,10 @@
 <script setup>
 import { RouterLink, RouterView } from "vue-router";
+import { Analytics } from '@vercel/analytics/vue';
 </script>
 
 <template>
+  <Analytics />
   <div class="space-twin-container">
     <!-- Grid Background Overlay -->
     <div class="grid-overlay"></div>
